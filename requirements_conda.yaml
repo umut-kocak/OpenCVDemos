@@ -1,0 +1,8 @@
+name: my_environment  # Replace with your desired environment name
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.13.1  # The specific version isn't specified; add if required
+  - numpy=2.2.0  # If available; adjust if version isn't in Conda
+  - opencv=4.10  # Includes contrib modules in conda-forge

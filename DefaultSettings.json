@@ -1,0 +1,16 @@
+{
+    "Settings": {
+        "inputWidth": 640,
+        "inputHeight": 480,
+        "windowWidth": 640,
+        "windowHeight": 480,
+        "resizable": true,
+
+        "frameWaitTime": 5,
+        "showHelp": true,
+        "showStats": true,
+        "detailedStats": false,
+        "fit_frame_to_window_size": false,
+        "missing_frames_to_tolerate": 200
+    }
+}
