@@ -1,0 +1,38 @@
+name: Pylint
+
+on: [push]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+    steps:
+    - uses: actions/checkout@v4
+
+    # Install Miniconda for Conda environment management
+    - name: Set up Miniconda
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        auto-update-conda: true
+        python-version: ${{ matrix.python-version }}
+
+    # Create Conda environment
+    - name: Create Conda environment
+      run: |
+        conda env create -f ./requirements_conda.yaml --prefix ./env
+
+    # Activate the environment and install pylint if not in requirements_conda.yaml
+    - name: Install pylint in Conda environment
+      run: |
+        eval "$(conda shell.bash hook)"
+        conda activate ./env
+        conda install -y pylint
+
+    # Run pylint using the specified .pylintrc
+    - name: Run pylint
+      run: |
+        eval "$(conda shell.bash hook)"
+        conda activate ./env
+        pylint $(git ls-files '*.py')
