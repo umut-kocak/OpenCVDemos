@@ -1,6 +1,14 @@
+"""
+This module provides classes for managing text properties and rendering text on images using OpenCV.
+`TextProperties` defines styling options such as color, font, and spacing, while `TextManager` facilitates
+drawing text with customizable or predefined properties, supporting multi-line text rendering and
+named property configurations.
+"""
+from dataclasses import dataclass
+
 import cv2
 
-
+@dataclass
 class TextProperties:
     """
     Represents the styling properties for drawing text on an image.
@@ -60,7 +68,8 @@ class TextManager:
             ValueError: If the provided properties are not an instance of TextProperties.
         """
         if not isinstance(properties, TextProperties):
-            raise ValueError("default_properties must be an instance of TextProperties")
+            raise ValueError(
+                "default_properties must be an instance of TextProperties")
         self._default_properties = properties
 
     def register_properties(self, name, properties):
@@ -75,7 +84,8 @@ class TextManager:
             ValueError: If the provided properties are not an instance of TextProperties.
         """
         if not isinstance(properties, TextProperties):
-            raise ValueError("properties must be an instance of TextProperties")
+            raise ValueError(
+                "properties must be an instance of TextProperties")
         self._registered_properties[name] = properties
 
     def draw_text(self, image, text, pos=(10, 20), properties=None):
@@ -139,10 +149,10 @@ class TextManager:
             ValueError: If the input is not valid.
         """
         if isinstance(properties, str):
-            return self._registered_properties.get(properties, self._default_properties)
-        elif isinstance(properties, TextProperties):
+            return self._registered_properties.get(
+                properties, self._default_properties)
+        if isinstance(properties, TextProperties):
             return properties
-        elif properties is None:
+        if properties is None:
             return self._default_properties
-        else:
-            raise ValueError("Invalid properties argument. Must be None, a string, or TextProperties.")
+        raise ValueError("Invalid properties argument. Must be None, a string, or TextProperties.")

@@ -1,10 +1,17 @@
+"""
+This module provides functionality for initializing and managing loggers using Python's logging framework.
+It includes a global logger for general application use and a method for creating separate, customized loggers
+with options for console and file logging, configurable levels, and formatted output.
+"""
 import logging
 from logging.handlers import RotatingFileHandler
 
 # Define a default global logger with basic configuration
-logger = None
+logger = None # pylint: disable=C0103
 
-def initialize_logger(name="ApplicationLogger", log_to_console=True, log_to_file=None, console_level=logging.INFO, file_level=logging.DEBUG):
+
+def initialize_logger(name="ApplicationLogger", log_to_console=True,
+                      log_to_file=None, console_level=logging.INFO, file_level=logging.DEBUG):
     """
     Initialize the global logger instance with specific settings.
 
@@ -15,11 +22,12 @@ def initialize_logger(name="ApplicationLogger", log_to_console=True, log_to_file
         console_level (int): Logging level for the console handler.
         file_level (int): Logging level for the file handler.
     """
-    global logger
+    global logger # pylint: disable=global-statement
 
     # Reconfigure the global logger
     logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)  # Set the logger's level to the lowest level you want to capture.
+    # Set the logger's level to the lowest level you want to capture.
+    logger.setLevel(logging.DEBUG)
 
     # Clear existing handlers to avoid duplicates
     if logger.hasHandlers():
@@ -33,7 +41,8 @@ def initialize_logger(name="ApplicationLogger", log_to_console=True, log_to_file
     # Add console handler if enabled
     if log_to_console:
         console_handler = logging.StreamHandler()
-        console_handler.setLevel(console_level)  # Set level for console handler
+        # Set level for console handler
+        console_handler.setLevel(console_level)
         console_handler.setFormatter(formatter)
         logger.addHandler(console_handler)
 
@@ -46,11 +55,11 @@ def initialize_logger(name="ApplicationLogger", log_to_console=True, log_to_file
         file_handler.setFormatter(formatter)
         logger.addHandler(file_handler)
 
-    logger.info(f"Logger '{name}' initialized.")
+    logger.debug("Logger '%s' initialized.", name)
 
 
-
-def create_separate_logger(name, log_to_console=True, log_to_file=None, level=logging.INFO):
+def create_separate_logger(name, log_to_console=True,
+                           log_to_file=None, level=logging.INFO):
     """
     Create a separate logger for specific purposes.
 

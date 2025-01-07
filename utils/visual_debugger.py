@@ -1,4 +1,12 @@
+"""
+This module provides a `VisualDebugger` class for real-time debugging of visual data by displaying
+frames either in separate windows or overlaying them on a main frame. It supports toggling between
+display modes, managing window states, and enabling/disabling debugging functionality. The debugger
+is designed to aid in visual inspection during development by offering flexibility in frame display
+and cycling through debugging views.
+"""
 import cv2
+
 from utils.logger import logger
 
 
@@ -57,8 +65,7 @@ class VisualDebugger:
         if self._separate_mode:
             self._show_separate()
             return main_frame
-        else:
-            return self._override_on_main(main_frame)
+        return self._override_on_main(main_frame)
 
     def override_next(self):
         """
@@ -83,7 +90,7 @@ class VisualDebugger:
         self._enabled = not self._enabled
         if not self.is_enabled():
             if self._separate_mode:
-                for name, frame in self._debugging_frames.items():
+                for name in self._debugging_frames:
                     if self._is_window_closed(name):
                         continue
                     cv2.destroyWindow(name)
@@ -127,9 +134,10 @@ class VisualDebugger:
             ndarray: The overridden debugging frame.
         """
         self._override_mode_index %= len(self._debugging_frames)
-        for i, (name, frame) in enumerate(self._debugging_frames.items()):
+        for i, frame in enumerate(self._debugging_frames.values()):
             if i == self._override_mode_index:
                 return frame
+        return main_frame
 
     def _is_window_closed(self, window_name):
         """
@@ -150,11 +158,11 @@ class VisualDebugger:
         try:
             prop = cv2.getWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN)
             is_closed = prop < 0
-        except cv2.error:
+        except cv2.error: # pylint: disable=E0712
             is_closed = True
 
         if is_closed:
-            logger.debug(f"Closing the window: {window_name}")
+            logger.debug("Closing the window: %s", window_name)
             self._opened_windows.remove(window_name)
             del self._debugging_frames[window_name]
             self._closed_windows.add(window_name)

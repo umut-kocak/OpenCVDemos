@@ -1,5 +1,12 @@
+"""
+This module provides the `DisplayManager` class, which facilitates managing OpenCV windows for
+visualizing video frames. It includes functionality to create windows with customizable properties,
+display frames with optional resizing, and clean up by closing all windows.
+"""
 import cv2
+
 from utils.logger import logger
+
 
 class DisplayManager:
     """
@@ -25,7 +32,7 @@ class DisplayManager:
             cv2.resizeWindow(window_name, *default_size)
 
         window_rect = cv2.getWindowImageRect(window_name)
-        logger.debug(f"Window({window_name}) {window_rect[2]}x{window_rect[3]} is created.")
+        logger.debug("Window(%s) %dx%d is created.", window_name, window_rect[2], window_rect[3])
 
     @staticmethod
     def show_frame(window_name, frame, resize_to_window=False):
@@ -41,7 +48,8 @@ class DisplayManager:
             window_rect = cv2.getWindowImageRect(window_name)
             width, height = window_rect[2], window_rect[3]
 
-            frame = cv2.resize(frame, (width, height), interpolation=cv2.INTER_LINEAR)
+            frame = cv2.resize(frame, (width, height),
+                               interpolation=cv2.INTER_LINEAR)
 
         cv2.imshow(window_name, frame)
 

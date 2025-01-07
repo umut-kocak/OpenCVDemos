@@ -1,6 +1,13 @@
-import cv2
-import numpy as np
+"""
+This script defines a `StatsManager` class to manage and track statistical data over time.
+It allows updating statistics, calculating aggregated metrics (such as min, max, average, and
+standard deviation) at specified intervals, and retrieving formatted results. The class is designed
+for efficient tracking and periodic calculation of statistics in real-time or near-real-time
+applications.
+"""
 from collections import defaultdict
+
+import numpy as np
 
 class StatsManager:
     """
@@ -54,7 +61,7 @@ class StatsManager:
             self._stats.clear()
 
         formatted_stats = []
-        
+
         for label, stats in self._labeled_results.items():
             if detailed:
                 formatted_stats.append(
@@ -67,7 +74,7 @@ class StatsManager:
                 formatted_stats.append(
                     f"{label}:{stats['avg']:.2f}"
                 )
-        
+
         return formatted_stats
 
     def cleanup(self):

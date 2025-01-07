@@ -1,3 +1,15 @@
+"""
+This module provides the `FaceDetector` class for detecting faces in images using OpenCV's Haar cascades.
+It initializes the required model and processes image frames to identify face regions.
+
+Dependencies:
+    - OpenCV (cv2)
+    - Haar cascade model file (`haarcascade_frontalface_default.xml`).
+
+Usage:
+    Instantiate the `FaceDetector` class and use it to detect faces in image frames,
+    returning their bounding rectangles.
+"""
 import cv2
 
 
@@ -5,6 +17,7 @@ class FaceDetector:
     """
     A simple face detection class using OpenCV's Haar cascades.
     """
+    # pylint: disable=too-few-public-methods
 
     def __init__(self):
         """
@@ -12,7 +25,8 @@ class FaceDetector:
         """
         self._face_cascade = self._initialize_cascade()
 
-    def detect_faces(self, frame, scale_factor=1.1, min_neighbors=5, min_size=(30, 30)):
+    def detect_faces(self, frame, scale_factor=1.1,
+                     min_neighbors=5, min_size=(30, 30)):
         """
         Detect faces in a given image frame.
 
@@ -25,7 +39,8 @@ class FaceDetector:
         Returns:
             list: A list of rectangles where faces were detected. Each rectangle is represented as (x, y, w, h).
         """
-        # Convert the frame to grayscale, as the face detection algorithm works on grayscale images.
+        # Convert the frame to grayscale, as the face detection algorithm works
+        # on grayscale images.
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
         # Detect faces in the image.
@@ -48,11 +63,12 @@ class FaceDetector:
         Raises:
             RuntimeError: If the Haar cascade model cannot be loaded.
         """
-        #model_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        # model_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         model_path = "./models/haarcascade_frontalface_default.xml"
         face_cascade = cv2.CascadeClassifier(model_path)
 
         if face_cascade.empty():
-            raise RuntimeError(f"Failed to load Haar cascade model from path: {model_path}")
+            raise RuntimeError(
+                f"Failed to load Haar cascade model from path: {model_path}")
 
         return face_cascade

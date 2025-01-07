@@ -1,10 +1,26 @@
-from concurrent.futures import ThreadPoolExecutor, Future
-from queue import Queue
-import threading
+"""
+This module implements a `ThreadPool` class to manage asynchronous task execution using a thread pool.
+It provides functionality to submit tasks, process them in the background, and handle exceptions.
+The thread pool supports a configurable number of workers and ensures tasks are completed during shutdown.
+"""
 import logging
-import time
+import threading
+from concurrent.futures import Future, ThreadPoolExecutor
+from queue import Queue
+
 
 class ThreadPool:
+    """
+    A class to manage a pool of worker threads that process tasks from a queue.
+
+    This class uses a `ThreadPoolExecutor` to manage a fixed number of threads 
+    that process tasks concurrently. Tasks are added to a queue, and a background 
+    worker thread processes the tasks from the queue.
+
+    Args:
+        max_workers (int): The maximum number of worker threads in the pool. 
+            Defaults to 5.
+    """
     def __init__(self, max_workers=5):
         """
         Initialize the ThreadPool.
@@ -17,7 +33,8 @@ class ThreadPool:
         self._stop_event = threading.Event()
 
         # Start a background thread to process the task queue
-        self.worker_thread = threading.Thread(target=self._process_tasks, daemon=True)
+        self.worker_thread = threading.Thread(
+            target=self._process_tasks, daemon=True)
         self.worker_thread.start()
 
     def submit_task(self, func, *args, **kwargs) -> Future:
@@ -45,7 +62,7 @@ class ThreadPool:
                 # Get a task from the queue
                 future = self.task_queue.get(timeout=0.1)
                 if future.done() and future.exception():
-                    logging.error(f"Task failed with exception: {future.exception()}")
+                    logging.error("Task failed with exception: %s", future.exception())
             except Queue.Empty:
                 continue
 
@@ -61,28 +78,3 @@ class ThreadPool:
 
         # Shutdown the executor
         self.executor.shutdown(wait=wait)
-
-# Example Usage
-if __name__ == "__main__":
-    def save_frame(frame_id):
-        logging.info(f"Saving frame {frame_id}")
-        time.sleep(0.5)  # Simulate saving time
-        logging.info(f"Frame {frame_id} saved.")
-
-    def log_message(message):
-        logging.info(f"Log: {message}")
-
-    logging.basicConfig(level=logging.INFO)
-
-    pool = ThreadPool(max_workers=3)
-
-    try:
-        # Submit tasks
-        for i in range(10):
-            pool.submit_task(save_frame, i)
-
-        pool.submit_task(log_message, "Background logging test.")
-
-        time.sleep(2)  # Simulate main loop processing
-    finally:
-        pool.shutdown()

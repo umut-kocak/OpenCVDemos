@@ -1,4 +1,10 @@
-import cv2
+"""
+This module provides the `KeyManager` class for handling keyboard events in an application.
+It allows registering keys with associated callbacks and descriptions, managing quit keys,
+and providing a help text summary for the registered keys and their functions.
+"""
+
+
 from utils.logger import logger
 
 
@@ -15,7 +21,8 @@ class KeyManager:
         self._key_descriptions = {}  # Maps keys to descriptions.
         self._quit_keys = []  # List of keys that signal quitting.
 
-    def register_key(self, key, description, callback, param=None, is_quit_key=False):
+    def register_key(self, key, description, callback,
+                     param=None, is_quit_key=False):
         """
         Register a key with a callback and description.
 
@@ -33,7 +40,7 @@ class KeyManager:
             raise ValueError("The callback must be a callable function or method.")
 
         if key in self._key_descriptions:
-            logger.warning(f"{chr(key)} is already registered.")
+            logger.warning("%s is already registered.", chr(key))
             return
 
         self._key_descriptions[key] = description
@@ -68,7 +75,8 @@ class KeyManager:
         Returns:
             list: A list of strings in the format "Key: Description".
         """
-        return [f"{chr(key)}: {desc}" for key, desc in self._key_descriptions.items()]
+        return [f"{chr(key)}: {desc}" for key,
+                desc in self._key_descriptions.items()]
 
     def print_help(self):
         """

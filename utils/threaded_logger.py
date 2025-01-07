@@ -1,13 +1,31 @@
-from concurrent.futures import ThreadPoolExecutor
+"""
+This module defines a `ThreadedLogger` class for asynchronous logging using a thread pool.
+It supports logging to both the console and a rotating log file, with customizable log levels
+and formatting. Log messages are processed in the background, improving performance for
+high-frequency logging scenarios.
+"""
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from logging.handlers import RotatingFileHandler
 
+
 class ThreadedLogger:
+    """
+        A class to handle logging operations asynchronously using a thread pool.
+    
+        This class uses a `ThreadPoolExecutor` to perform logging operations in 
+        a separate thread, allowing for non-blocking and concurrent logging.
+    
+        Args:
+            max_workers (int): The maximum number of threads in the thread pool. 
+                Defaults to 2.
+    """
     def __init__(self, max_workers=2):
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
         self.logger = None
 
-    def initialize_logger(self, name="ApplicationLogger", log_to_console=True, log_to_file=None, console_level=logging.INFO, file_level=logging.DEBUG):
+    def initialize_logger(self, name="ApplicationLogger", log_to_console=True,
+                          log_to_file=None, console_level=logging.INFO, file_level=logging.DEBUG):
         """
         Initialize the logger with asynchronous threading for log calls.
 
@@ -26,7 +44,8 @@ class ThreadedLogger:
             self.logger.handlers.clear()
 
         # Define formatter
-        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+        formatter = logging.Formatter(
+            "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
         # Console handler
         if log_to_console:
@@ -37,12 +56,13 @@ class ThreadedLogger:
 
         # File handler
         if log_to_file:
-            file_handler = RotatingFileHandler(log_to_file, maxBytes=5 * 1024 * 1024, backupCount=3)
+            file_handler = RotatingFileHandler(
+                log_to_file, maxBytes=5 * 1024 * 1024, backupCount=3)
             file_handler.setLevel(file_level)
             file_handler.setFormatter(formatter)
             self.logger.addHandler(file_handler)
 
-        self.logger.info(f"Threaded logger '{name}' initialized.")
+        self.logger.info("Threaded logger '%s' initialized.", name)
 
     def log(self, level, msg, *args, **kwargs):
         """
@@ -62,6 +82,7 @@ class ThreadedLogger:
         Shutdown the thread pool and wait for all logging tasks to complete.
         """
         self.executor.shutdown(wait=True)
+
 
 # Usage Example
 if __name__ == "__main__":

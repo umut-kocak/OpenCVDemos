@@ -1,10 +1,18 @@
+"""
+This module provides the `FrameTimer` class, a utility for measuring frame processing times
+and calculating performance statistics such as FPS and labeled time intervals. It supports
+tracking multiple labeled intervals within a frame, computing statistics over a configurable
+number of frames, and formatting results for display or logging.
+"""
+from collections import defaultdict
+
 import cv2
 import numpy as np
-from collections import defaultdict
 
 from utils.logger import logger
 
 SEC_TO_MSEC = 1000
+
 
 class FrameTimer:
     """
@@ -26,8 +34,8 @@ class FrameTimer:
         self._active_labels = {}
         self._ignored_labels = set()
         self._label_times = defaultdict(list)
-        self._label_times['FPS'] = list()
-        self._label_times['FrT(ms)'] = list()
+        self._label_times['FPS'] = []
+        self._label_times['FrT(ms)'] = []
         self._label_stats = {}
 
         self._last_frame_start = None
@@ -41,7 +49,8 @@ class FrameTimer:
             RuntimeError: If called consecutively without an `end_frame`.
         """
         if self._last_frame_start is not None and self._last_frame_end is None:
-            raise RuntimeError("start_frame called consecutively without an end_frame.")
+            raise RuntimeError(
+                "start_frame called consecutively without an end_frame.")
         self._last_frame_start = cv2.getTickCount()
         self._active_labels.clear()
 
@@ -53,7 +62,8 @@ class FrameTimer:
             RuntimeError: If called without a preceding `start_frame`.
         """
         if self._last_frame_start is None:
-            raise RuntimeError("undo_start_frame called without a preceding start_frame.")
+            raise RuntimeError(
+                "undo_start_frame called without a preceding start_frame.")
         self._last_frame_start = None
 
     def end_frame(self):
@@ -64,11 +74,14 @@ class FrameTimer:
             RuntimeError: If called without a preceding `start_frame`.
         """
         if self._last_frame_start is None:
-            raise RuntimeError("end_frame called without a preceding start_frame.")
+            raise RuntimeError(
+                "end_frame called without a preceding start_frame.")
 
         self._last_frame_end = cv2.getTickCount()
-        frame_time = (self._last_frame_end - self._last_frame_start) / self._ticks_per_unit
-        self._label_times['FPS'].append(1.0 / frame_time if frame_time > 0 else 0.0)
+        frame_time = (self._last_frame_end -
+                      self._last_frame_start) / self._ticks_per_unit
+        self._label_times['FPS'].append(
+            1.0 / frame_time if frame_time > 0 else 0.0)
         self._label_times['FrT(ms)'].append(frame_time)
         self._last_frame_start = None
         self._last_frame_end = None
@@ -94,9 +107,8 @@ class FrameTimer:
 
             # Clear the label times for the next interval
             self._label_times.clear()
-            self._label_times['FPS'] = list()
-            self._label_times['FrT(ms)'] = list()
-            
+            self._label_times['FPS'] = []
+            self._label_times['FrT(ms)'] = []
 
     def begin_label(self, label):
         """
@@ -111,7 +123,7 @@ class FrameTimer:
 
         if label in self._active_labels:
             if label not in self._ignored_labels:
-                logger.warning(f"Warning: 'begin_label' for '{label}' called without a matching 'end_label'. Ignoring further warnings for this label.")
+                logger.warning("Ignoring '%s' since 'begin_label' is called without a matching 'end_label'.", label)
                 self._ignored_labels.add(label)
             return
 
@@ -130,14 +142,14 @@ class FrameTimer:
 
         if label not in self._active_labels:
             if label not in self._ignored_labels:
-                logger.warning(f"Warning: 'end_label' for '{label}' called without a matching 'begin_label'. Ignoring further warnings for this label.")
+                logger.warning("Ignoring '%s' since 'end_label' is called without a matching 'begin_label'.", label)
                 self._ignored_labels.add(label)
             return
 
         start_tick = self._active_labels.pop(label)
         if start_tick > current_tick:
             if label not in self._ignored_labels:
-                logger.warning(f"Warning: 'end_label' for '{label}' called before 'begin_label'. Ignoring further warnings for this label.")
+                logger.warning("Ignoring '%s' since 'end_label' is called before 'begin_label'.", label)
                 self._ignored_labels.add(label)
             return
 
@@ -165,17 +177,17 @@ class FrameTimer:
     def get_formatted_stats(self, detailed=False):
         """
         Get the most recent statistics formatted as strings.
-        
+
         Args:
             detailed (bool): Whether to include detailed stats (min, max, stddev) or just avg.
-        
+
         Returns:
             list: A list of strings formatted based on the detailed flag:
                 - If detailed: "label: avg: X min: Y max: Z stdv: W"
                 - If not detailed: "label: avg: X"
         """
         formatted_stats = []
-        
+
         for label, stats in self._label_stats.items():
             if detailed:
                 formatted_stats.append(
@@ -188,5 +200,5 @@ class FrameTimer:
                 formatted_stats.append(
                     f"{label}:{stats['avg']:.2f}"
                 )
-        
+
         return formatted_stats
