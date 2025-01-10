@@ -20,15 +20,14 @@ class Settings:
     """
 
     def __init__(self, setting_files: str = None):
-        self.frame_wait_time = 1
-        self.show_help = False
-        self.show_stats = False
-        self.input_width = 640
-        self.input_height = 480
+
+        self.video_source = 0
+        self.input_width = None
+        self.input_height = None
         self.window_width = 640
         self.window_height = 480
-        self.resizable = True
-        self.fit_frame_to_window_size = False
+        self.resizable_window = True
+
 
         # Load settings from JSON file if provided
         if setting_files:

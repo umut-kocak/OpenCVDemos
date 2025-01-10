@@ -4,20 +4,51 @@ It supports both single-threaded and multi-threaded approaches for frame capture
 and adaptable video streaming. The `VideoStreamManager` class orchestrates the video capture process
 with methods to start, stop, toggle strategies, and retrieve frames, while ensuring resource management.
 """
+from enum import Enum
 import threading
 import time
 from queue import Queue
+import weakref
 
 import cv2
 
 from utils.frame_data import FrameData
 from utils.logger import logger
 
+class FrameFilteringMethod(Enum):
+    NONE = 1
+    SKIP_FRAME = 2
+    ADAPT_QUEUE_SIZE = 3
+
+    def next(self):
+        members = list(type(self))
+        next_index = (members.index(self) + 1) % len(members)
+        return members[next_index]
+
+    @classmethod
+    def get_from_string(cls, name):
+        try:
+            # Access the enum member by name
+            return cls.__members__[name.upper()]
+        except KeyError:
+            logger.warning("Invalid FrameFilteringMethod ignored: %s", name)
+            return cls.__members__["NONE"]
 
 class VideoCaptureStrategy:
     """
     Abstract base class for video capture strategies.
     """
+
+    def __init__(self, owner):
+        """
+        Initialize the strategy.
+
+        Args:
+            owner (VideoStreamManager): The owner.
+        """
+        self._owner = weakref.ref(owner)
+        self.frame_filtering = FrameFilteringMethod.NONE
+        self.set_frame_filtering_method( FrameFilteringMethod.get_from_string(self._owner()._settings().video_capture_frame_filter_metod) )
 
     def get_frame(self, supress_warnings=False):
         """
@@ -53,28 +84,31 @@ class VideoCaptureStrategy:
         """
         return 0
 
+    def set_frame_filtering_method(self, method):
+        """
+        Sets the method for frame filtering.
+
+        Args:
+            method (FrameFilteringMethod): Method to set.
+
+        Returns:
+            None
+        """
+
 
 class SingleThreadedStrategy(VideoCaptureStrategy):
     """
     Strategy for single-threaded video capture.
     """
 
-    def __init__(self, capture):
-        """
-        Initialize the single-threaded strategy.
-
-        Args:
-            capture (cv2.VideoCapture): The video capture object.
-        """
-        self._capture = capture
-
     def start(self):
         """
         Start the single-threaded capture strategy.
         """
+        self._index_skipped_frames = 0
         logger.debug("Single-threaded strategy started.")
 
-    def get_frame(self, supress_warnings=False):
+    def get_frame(self, supress_warnings=True):
         """
         Retrieve a frame in single-threaded mode.
 
@@ -84,12 +118,29 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
         Returns:
             FrameData: The captured frame with metadata, or None if capture failed.
         """
-        ret, frame = self._capture.read()
+        ret, frame = self._owner()._capture.read()
         if not ret:
             if not supress_warnings:
                 logger.warning("Frame capture failed in single-threaded mode.")
             return None
+        
+        if self.frame_filtering == FrameFilteringMethod.SKIP_FRAME:
+            self._index_skipped_frames += 1
+            if self._index_skipped_frames % self._owner()._settings().video_capture_frame_filter_skip_number == 0:
+                self._index_skipped_frames = 0
+            should_skip_frame = (self._index_skipped_frames == 0)
+            if should_skip_frame > 0:
+                number_of_frames_to_skip = 1
+                # Create a separate thread to skip frames
+                thread = threading.Thread(target=self._skip_frames, args=(number_of_frames_to_skip,))
+                thread.start()
+                thread.join()  # Wait for the thread to complete before proceeding
+
         return FrameData(frame, time.time())
+
+    def _skip_frames(self, n):
+        for _ in range(n):
+            self._owner()._capture.read()  # Ignore the output
 
     def stop(self):
         """
@@ -97,22 +148,48 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
         """
         logger.debug("Single-threaded strategy stopped.")
 
+    def set_frame_filtering_method(self, method):
+        """
+        Sets the method for frame filtering.
+
+        Args:
+            method (FrameFilteringMethod): Method to set.
+
+        Returns:
+            None
+        """
+        new_method = method
+        match method:
+            case FrameFilteringMethod.NONE:
+                new_method = FrameFilteringMethod.NONE
+            case FrameFilteringMethod.SKIP_FRAME:
+                if self._owner()._is_camera:
+                    logger.warning("Single-threaded video capture ignores the filtering method %s when the input is from camera.", method.name)
+                    new_method = FrameFilteringMethod.NONE
+            case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
+                logger.warning("Single-threaded video capture ignores the filtering method %s.", method.name)
+                new_method = FrameFilteringMethod.NONE
+            case _:
+                new_method = FrameFilteringMethod.NONE
+        logger.debug("Single-threaded video capture filtering method changed to %s.", new_method.name)
+        self.frame_filtering = new_method
+
 
 class MultiThreadedStrategy(VideoCaptureStrategy):
     """
     Strategy for multi-threaded video capture with queuing.
     """
 
-    def __init__(self, capture):
+    def __init__(self, owner):
         """
         Initialize the multi-threaded strategy.
 
         Args:
-            capture (cv2.VideoCapture): The video capture object.
+            owner (VideoStreamManager): The owner.
         """
-        self._capture = capture
-        self._max_queue_size = 30
-        self._queue = Queue(maxsize=self._max_queue_size)
+        super(MultiThreadedStrategy, self).__init__(owner)
+        self._initial_max_queue_size = 30
+        self._current_max_queue_size = self._initial_max_queue_size
         self._started = False
         self._thread = None
 
@@ -122,13 +199,14 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
         """
         if self._started:
             return
+        self._queue = Queue(maxsize=self._initial_max_queue_size)
         self._started = True
         self._thread = threading.Thread(
             target=self._capture_frames, daemon=True)
         self._thread.start()
         logger.debug("Multi-threaded strategy started.")
 
-    def get_frame(self, supress_warnings=False):
+    def get_frame(self, supress_warnings=True):
         """
         Retrieve a frame from the queue in multi-threaded mode.
 
@@ -141,8 +219,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
         if not self._queue.empty():
             return self._queue.get()
         if not supress_warnings:
-            logger.warning(
-                "Frame queue is empty; no frame to provide in multi-threaded mode.")
+            logger.warning("Frame queue is empty; no frame to provide in multi-threaded mode.")
         return None
 
     def stop(self):
@@ -156,7 +233,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
             self._thread.join()
             self._thread = None
         # Clear the queue by reinitializing after the thread is stopped
-        self._queue = Queue(maxsize=self._max_queue_size)
+        self._queue = None
         logger.debug("Multi-threaded strategy stopped.")
 
     def get_queue_size(self):
@@ -168,21 +245,75 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
         """
         return self._queue.qsize()
 
+    def set_frame_filtering_method(self, method):
+        """
+        Sets the method for frame filtering. It is not thread-safe.
+
+        Args:
+            method (FrameFilteringMethod): Method to set.
+
+        Returns:
+            None
+        """
+        new_method = method
+        match method:
+            case FrameFilteringMethod.NONE:
+                logger.warning("Multi-threaded-threaded video capture with filtering method 'NONE' can cause dropped frames.")
+            case FrameFilteringMethod.SKIP_FRAME:
+                pass
+            case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
+                if self._owner()._is_camera:
+                    logger.warning("Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' with camera can cause high latency.")
+                else:
+                    logger.warning("Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' with video might consume high memory use, consider switching to single-threaded video processing.")
+            case _:
+                new_method = FrameFilteringMethod.NONE
+        logger.debug("Multi-threaded video capture filtering method changed to %s.", new_method.name)
+        self.frame_filtering = new_method
+
     def _capture_frames(self):
         """
         Continuously capture frames and enqueue them for processing.
         """
+        self._index_skipped_frames = 0
         while self._started:
-            ret, frame = self._capture.read()
+            ret, frame = self._owner()._capture.read()
             if not ret:
                 logger.warning("Frame capture failed in multi-threaded mode.")
                 break
 
+            if self._apply_frame_filtering():
+                continue
+            
             if not self._queue.full():
                 self._queue.put(FrameData(frame, time.time()))
             else:
-                logger.warning(
-                    "Frame queue is full; dropping frame in multi-threaded mode.")
+                logger.warning("Frame queue is full; dropping frame in multi-threaded mode.")
+
+    def _apply_frame_filtering(self):
+        should_skip_frame = False
+        match self.frame_filtering:
+            case FrameFilteringMethod.NONE:
+                pass
+            case FrameFilteringMethod.SKIP_FRAME:
+                self._index_skipped_frames += 1
+                if self._index_skipped_frames % self._owner()._settings().video_capture_frame_filter_skip_number == 0:
+                    self._index_skipped_frames = 0
+                should_skip_frame = (self._index_skipped_frames == 0)
+            case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
+                if self._queue.full():
+                    self._current_max_queue_size *= 2
+                    logger.warning("Doubling the size of the queue to new size %d.", self._current_max_queue_size)
+                    self._resize_queue(self._current_max_queue_size)
+            case _:
+                new_method = FrameFilteringMethod.NONE
+        return should_skip_frame
+
+    def _resize_queue(self, max_size):
+        new_queue = Queue(maxsize=max_size)
+        while not self._queue.empty():
+            new_queue.put(self._queue.get())
+        self._queue = new_queue  # Replace the old queue with the new one
 
 
 class VideoStreamManager:
@@ -190,26 +321,27 @@ class VideoStreamManager:
     Manages video stream capture with support for strategy patterns.
     """
 
-    def __init__(self, source=0, width=None, height=None):
+    def __init__(self, settings):
         """
         Initialize the video stream manager.
 
         Args:
-            source (int or str): The video source (camera index or file path).
-            width (int, optional): The desired frame width.
-            height (int, optional): The desired frame height.
+            settings: The settings file.
         """
-        self._capture = cv2.VideoCapture(source)
-        if width and height:
-            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, width)
-            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, height)
+        self._settings = weakref.ref(settings)
+        self._capture = cv2.VideoCapture(settings.video_source)
+        self._is_camera = (settings.video_source == 0)
+        if settings.input_width and settings.input_height:
+            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, settings.input_width)
+            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.input_height)
 
         self.width = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
         logger.debug("Video captured with dimensions: %dx%d", self.width, self.height)
 
-        self._strategy = MultiThreadedStrategy(self._capture)
         self._started = False
+        self.capture_strategy = None
+        self.set_strategy(SingleThreadedStrategy(self) if settings.video_capture_threading == "Single" else MultiThreadedStrategy(self))
 
     def set_strategy(self, strategy):
         """
@@ -221,8 +353,8 @@ class VideoStreamManager:
         was_started = self._started
         if was_started:
             self.stop()
-        self._strategy = strategy
-        logger.debug("Video capture strategy set to %s.", self._strategy.__class__.__name__)
+        self.capture_strategy = strategy
+        logger.debug("Video capture strategy set to %s.", self.capture_strategy.__class__.__name__)
         if was_started:
             self.start()
 
@@ -230,10 +362,10 @@ class VideoStreamManager:
         """
         Toggle between single-threaded and multi-threaded strategies.
         """
-        if isinstance(self._strategy, SingleThreadedStrategy):
-            self.set_strategy(MultiThreadedStrategy(self._capture))
+        if isinstance(self.capture_strategy, SingleThreadedStrategy):
+            self.set_strategy(MultiThreadedStrategy(self))
         else:
-            self.set_strategy(SingleThreadedStrategy(self._capture))
+            self.set_strategy(SingleThreadedStrategy(self))
         logger.debug("Strategy toggled.")
 
     def start(self, wait_for_the_first_frame=True, max_waiting_time=1):
@@ -248,10 +380,10 @@ class VideoStreamManager:
             logger.debug("VideoStreamManager is already started.")
             return
         self._started = True
-        self._strategy.start()
+        self.capture_strategy.start()
         if wait_for_the_first_frame:
             waiting_start = time.time()
-            while self._strategy.get_frame(True) is None:
+            while self.capture_strategy.get_frame(True) is None:
                 if time.time() - waiting_start > max_waiting_time:
                     logger.warning(
                         "VideoStreamManager can not get frames after %f seconds upon start.", max_waiting_time)
@@ -269,7 +401,7 @@ class VideoStreamManager:
             logger.warning(
                 "VideoStreamManager is not started. Cannot get frame.")
             return None
-        return self._strategy.get_frame()
+        return self.capture_strategy.get_frame()
 
     def stop(self):
         """
@@ -279,7 +411,7 @@ class VideoStreamManager:
             logger.debug("VideoStreamManager is already stopped.")
             return
         self._started = False
-        self._strategy.stop()
+        self.capture_strategy.stop()
         logger.debug("VideoStreamManager stopped.")
 
     def release(self):
@@ -287,6 +419,7 @@ class VideoStreamManager:
         Release the video capture resources.
         """
         self.stop()
+        self.strategy = None
         if self._capture.isOpened():
             self._capture.release()
 
@@ -297,7 +430,7 @@ class VideoStreamManager:
         Returns:
             int: The number of frames in the queue.
         """
-        return self._strategy.get_queue_size()
+        return self.capture_strategy.get_queue_size()
 
     def __del__(self):
         """

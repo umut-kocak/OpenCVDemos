@@ -4,13 +4,23 @@
         "input_height": 480,
         "window_width": 640,
         "window_height": 480,
-        "resizable": true,
+        "resizable_window": true,
 
-        "frame_wait_time": 5,
+        "video_source": 0,
+        "video_capture_threading": "Multi",
+		"video_capture_frame_filter_metod": "NONE",
+		"video_capture_frame_filter_skip_number": 4,
+
+        "resize_input_to_process": true,
+        "resize_output_to_window": false,
+        "process_width": 400,
+        "process_height": 300,
+
+        "frame_wait_time": 1,
+        "missing_frames_to_tolerate": 200,
+
         "show_help": true,
         "show_stats": true,
-        "detailedStats": false,
-        "fit_frame_to_window_size": false,
-        "missing_frames_to_tolerate": 200
+        "detailedStats": false
     }
 }

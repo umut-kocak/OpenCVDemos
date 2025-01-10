@@ -11,8 +11,11 @@ Key Features:
 Usage:
 Subclass `BaseVideoDemo` and override required methods to create custom video demos.
 """
-import time
 from abc import ABC, abstractmethod
+import os
+from pathlib import Path
+import sys
+import time
 
 import cv2
 
@@ -35,20 +38,19 @@ class BaseVideoDemo(ABC):
     Subclasses should implement specific frame processing logic and window naming.
     """
 
-    def __init__(self, source=0, settings_file=None):
+    def __init__(self, settings_file=None):
         """Initialize the video demo with video source and settings."""
 
         # Settings
-        self._settings = Settings(["DefaultSettings.json", settings_file])
+        self.settings = Settings(["DefaultSettings.json", self.get_demo_settings_file_path(), settings_file])
 
         # Handlers
-        self._video_manager = VideoStreamManager(
-            source, self._settings.input_width, self._settings.input_height)
+        self._video_manager = VideoStreamManager(self.settings)
         self._video_manager.start()
 
         DisplayManager.create_window(self.get_window_name(),
-                                     resizable=self._settings.resizable,
-                                     default_size=(self._settings.window_width, self._settings.window_height))
+                                     resizable=self.settings.resizable_window,
+                                     default_size=(self.settings.window_width, self.settings.window_height))
 
         self._key_manager = KeyManager()
         self._stats_manager = StatsManager(calculation_frequency=30)
@@ -76,41 +78,56 @@ class BaseVideoDemo(ABC):
     def pre_frame_loop(self):
         """Hook for operations to run before the frame loop starts."""
 
+    def resize_to_process_frame(self, frame):
+        """.Resizes the frame from video to the desired size for the processing."""
+        frame.image = cv2.resize(frame.image,
+            (self.settings.process_width, self.settings.process_height),
+            interpolation=cv2.INTER_LINEAR)
+        return frame
+
+    def resize_from_process_frame(self, frame):
+        """.Resizes the output of the processing back to the original video frame size."""
+        frame.image = cv2.resize(frame.image,
+            (self.settings.input_width, self.settings.input_height),
+            interpolation=cv2.INTER_LINEAR)
+        return frame
+
     def frame_loop_begin(self):
         """Capture and return a frame. Can be overridden by subclasses."""
         frame = self._video_manager.get_frame()
-        if frame is None:
-            logger.warning("Cannot get any frame from video manager.")
+        #if frame is None: logger.warning("Cannot get any frame from video manager.")
         return frame
 
     def frame_loop_end(self, frame):
         """Handle post-frame operations such as displaying and stats updates."""
         self._stats_manager.update_stat(
-            "FrWaitT(ms)", self._settings.frame_wait_time)
+            "FrWaitT(ms)", self.settings.frame_wait_time)
         self._stats_manager.update_stat(
             "VidQueueSize", self._video_manager.get_queue_size())
+        self._stats_manager.update_stat(
+            "VidSkipFrame", self.settings.video_capture_frame_filter_skip_number if self._video_manager.capture_strategy.frame_filtering.value == 2 else 0)
 
-        if self._settings.show_help:
+        if self.settings.show_help:
             x, y = (int(0.2 * self._video_manager.width),
                     int(0.2 * self._video_manager.height))
             self._text_manager.draw_text(
                 frame.image, self._key_manager.get_help_text(), pos=(x, y))
 
-        if self._settings.show_stats:
+        if self.settings.show_stats:
             x, y = (int(0.02 * self._video_manager.width),
                     int(0.05 * self._video_manager.height))
             self._text_manager.draw_text(
                 frame.image,
-                self._frame_timer.get_formatted_stats(self._settings.detailedStats) +
-                    self._stats_manager.get_formatted_stats(self._settings.detailedStats),
+                self._frame_timer.get_formatted_stats(self.settings.detailedStats) +
+                    self._stats_manager.get_formatted_stats(self.settings.detailedStats),
                 pos=(x, y),
                 properties="stats",
             )
 
         DisplayManager.show_frame(self.get_window_name(
-        ), frame.image, self._settings.fit_frame_to_window_size)
+        ), frame.image, self.settings.resize_output_to_window)
 
-        key = cv2.waitKey(self._settings.frame_wait_time) & 0xFF
+        key = cv2.waitKey(self.settings.frame_wait_time) & 0xFF
         # cv2.waitKey is the actual call causing anything to be drawn, so
         # measure latency after this.
         self._stats_manager.update_stat(
@@ -121,7 +138,7 @@ class BaseVideoDemo(ABC):
 
     def pause_loop(self):
         """."""
-        key = cv2.waitKey(self._settings.frame_wait_time) & 0xFF
+        key = cv2.waitKey(self.settings.frame_wait_time) & 0xFF
         if not self._key_manager.check_events(key):
             self._quit_loop = True
             return False
@@ -164,14 +181,18 @@ class BaseVideoDemo(ABC):
                 # tolerated limits
                 self._number_of_null_frames += 1
                 self._frame_timer.undo_start_frame()
-                if self._number_of_null_frames > self._settings.missing_frames_to_tolerate:
+                if self.settings.missing_frames_to_tolerate > 0 and self._number_of_null_frames > self.settings.missing_frames_to_tolerate:
                     # Too many None frames, Quit the main loop
                     break
                 continue
 
             # Processing the frame
             self._frame_timer.begin_label("PocessT(ms)")
+            if self.settings.resize_input_to_process:
+                frame = self.resize_to_process_frame(frame)
             frame = self.process_frame(frame)
+            if self.settings.resize_input_to_process:
+                frame = self.resize_from_process_frame(frame)
             self._frame_timer.end_label("PocessT(ms)")
 
             # End of the frame
@@ -197,17 +218,17 @@ class BaseVideoDemo(ABC):
         self._key_manager.register_key(ord('H'), "Show help text",
                                        lambda settings: setattr(
                                            settings, 'show_help', not getattr(settings, 'show_help')),
-                                       self._settings)
+                                       self.settings)
 
         self._key_manager.register_key(ord('s'), "Toggle stats",
                                        lambda settings: (setattr(settings, 'show_stats', not getattr(
                                            settings, 'show_stats')), setattr(settings, 'detailedStats', False)),
-                                       self._settings)
+                                       self.settings)
 
         self._key_manager.register_key(ord('S'), "Toggle stats(detailed)",
                                        lambda settings: (setattr(settings, 'show_stats', not getattr(
                                            settings, 'show_stats')), setattr(settings, 'detailedStats', True)),
-                                       self._settings)
+                                       self.settings)
 
         self._key_manager.register_key(ord('d'), "Enable/Disable VisualDebugger.",
                                        lambda debugger: debugger.toggle(),
@@ -228,16 +249,42 @@ class BaseVideoDemo(ABC):
         self._key_manager.register_key(ord('u'), "Increase waiting time at the end of the frame.",
                                        lambda settings: setattr(settings, 'frame_wait_time', getattr(
                                            settings, 'frame_wait_time') + 1),
-                                       self._settings)
+                                       self.settings)
         self._key_manager.register_key(ord('j'), "Decrease waiting time at the end of the frame.",
                                        lambda settings: setattr(settings, 'frame_wait_time', max(
                                            1, getattr(settings, 'frame_wait_time') - 1)),
-                                       self._settings)
+                                       self.settings)
 
         self._key_manager.register_key(ord('C'), "Save the current settings.",
                                        lambda settings: settings.save_to_json(
                                            "CurrentSettings.json"),
-                                       self._settings)
+                                       self.settings)
+
+        self._key_manager.register_key(ord('f'), "Change the frame filter method of video capture strategy.",
+                                       lambda manager: ( manager.capture_strategy.set_frame_filtering_method(manager.capture_strategy.frame_filtering.next()) ),
+                                       self._video_manager)
+
+        self._key_manager.register_key(ord('i'), "Increase video_capture_frame_filter_skip_number.",
+                                       lambda settings: setattr(settings, 'video_capture_frame_filter_skip_number', getattr(
+                                           settings, 'video_capture_frame_filter_skip_number') + 1),
+                                       self.settings)
+        self._key_manager.register_key(ord('k'), "Decrease video_capture_frame_filter_skip_number.",
+                                       lambda settings: setattr(settings, 'video_capture_frame_filter_skip_number', max(
+                                           2, getattr(settings, 'video_capture_frame_filter_skip_number') - 1)),
+                                       self.settings)
+
+    def get_demo_folder(self):
+        """ Gets the folder(Path) where the demo resides."""
+        module_name = self.__class__.__module__
+        module_file = sys.modules[module_name].__file__
+        return Path(os.path.dirname(os.path.abspath(module_file)))
+
+    def get_demo_settings_file_path(self):
+        """ Gets the (local) settings file within the specific demo folder."""
+        full_path = self.get_demo_folder() / "Settings.json"
+        if full_path.exists():
+            return full_path
+        return None
 
     def _should_quit_frame_loop(self):
         """Determine if the frame loop should quit."""
