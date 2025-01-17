@@ -1,6 +1,5 @@
 {
     "Settings": {
-
         "demo": {
             "sigma_s0": 60,
             "sigma_s1": 10,
@@ -15,26 +14,21 @@
         },
         "video": {
             "capture": {
-                "threading": "Multi",
                 "frame_filtering": {
-                    "method": "SKIP",
-                    "skip_number": 4
+                    "method": "SKIP_FRAME",
+					"skip_frame": {
+						"action": "SKIP",
+						"period": 3
+					}
                 }
             }
         },
-        "display": {
-            "width": 640,
-            "height": 480,
-            "resizable": true,
-            "resize_output_to_window": false
-        },
         "frame": {
-            "wait_time": 1,
             "missing_to_tolerate": -200,
             "processing": {
                 "resize_capture_before_process": true,
-                "width": 400,
-                "height": 300
+                "width": 320,
+                "height": 240
             }
         },
         "stats": {

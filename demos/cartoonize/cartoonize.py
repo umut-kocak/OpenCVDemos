@@ -1,5 +1,5 @@
 """
-This module implements the StylingDemo class, a video processing demo that applies various 
+This module implements the CartoonizeDemo class, a video processing demo that applies various 
 stylization effects to video frames in real-time. The demo supports multiple modes, allowing 
 the user to cycle through different effects such as edge-preserving filtering, detail 
 enhancement, pencil sketch, and stylization.

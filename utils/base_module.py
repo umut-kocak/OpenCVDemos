@@ -43,6 +43,8 @@ class BaseVideoDemo(ABC):
 
         # Settings
         self.settings = Settings(["DefaultSettings.json", self.get_demo_settings_file_path(), settings_file])
+        if self.settings.print_ocv_info:
+            print(cv2.getBuildInformation())
 
         # Handlers
         self._video_manager = VideoStreamManager(self.settings)
@@ -105,7 +107,7 @@ class BaseVideoDemo(ABC):
         self._stats_manager.update_stat(
             "VidQueueSize", self._video_manager.get_queue_size())
         self._stats_manager.update_stat(
-            "VidSkipFrame", self.settings.video.capture.frame_filtering.skip_number if self._video_manager.capture_strategy.frame_filtering.value == 2 else 0)
+            "VidSkipFrame", self._video_manager.capture_strategy.get_frame_filtering_skip_size())
 
         if self.settings.stats.show_help:
             # Base help text
@@ -231,9 +233,9 @@ class BaseVideoDemo(ABC):
             new_time = max(1, getattr(settings, 'wait_time') + delta)
             setattr(settings, 'wait_time', new_time)
     
-        def adjust_skip_number(settings, delta):
-            new_skip = max(2, getattr(settings, 'skip_number') + delta)
-            setattr(settings, 'skip_number', new_skip)
+        def adjust_skip_period(settings, delta):
+            new_skip = max(2, getattr(settings, 'period') + delta)
+            setattr(settings, 'period', new_skip)
         
         key_bindings = [
             # General keys
@@ -265,8 +267,8 @@ class BaseVideoDemo(ABC):
             (ord('C'), "Save the current settings.", lambda s: s.save_to_json("CurrentSettings.json"), self.settings),
             
             # Video capture skip number
-            (ord('i'), "Increase video_capture_frame_filter_skip_number.", lambda s: adjust_skip_number(s, +1), self.settings.video.capture.frame_filtering),
-            (ord('k'), "Decrease video_capture_frame_filter_skip_number.", lambda s: adjust_skip_number(s, -1), self.settings.video.capture.frame_filtering),
+            (ord('i'), "Increase video_capture_frame_filter_skip_number.", lambda s: adjust_skip_period(s, +1), self.settings.video.capture.frame_filtering.skip_frame),
+            (ord('k'), "Decrease video_capture_frame_filter_skip_number.", lambda s: adjust_skip_period(s, -1), self.settings.video.capture.frame_filtering.skip_frame),
         ]
     
         # Register all key bindings

@@ -50,6 +50,8 @@ class VideoCaptureStrategy:
         self.frame_filtering = FrameFilteringMethod.NONE
         self.set_frame_filtering_method( FrameFilteringMethod.get_from_string(self._owner()._settings().video.capture.frame_filtering.method) )
 
+        self._index_skipped_frames = 0
+
     def get_frame(self, supress_warnings=False):
         """
         Retrieve a video frame.
@@ -95,6 +97,37 @@ class VideoCaptureStrategy:
             None
         """
 
+    def get_frame_filtering_skip_size(self):
+        """
+        Get the current skip frame for the frame filtering.
+
+        Returns:
+            int: The skipping frames.
+        """
+        if self.frame_filtering.value == 2:
+            return self._owner()._settings().video.capture.frame_filtering.skip_frame.period
+        return 0
+
+    def _should_skip_frame(self):
+        """
+        Checks if the frame needs to be skipped.
+
+        Returns:
+            bool: True if the frame needs to be skipped.
+        """
+        should_skip = False
+        if self.frame_filtering == FrameFilteringMethod.SKIP_FRAME:
+            in_period_begin = False
+            stngs = self._owner()._settings().video.capture.frame_filtering.skip_frame
+            self._index_skipped_frames += 1
+            if self._index_skipped_frames % stngs.period == 0:
+                self._index_skipped_frames = 0
+                in_period_begin = True
+            if stngs.action == "SKIP":
+                should_skip = in_period_begin
+            elif stngs.action == "PICKUP":
+                should_skip = not in_period_begin
+        return should_skip
 
 class SingleThreadedStrategy(VideoCaptureStrategy):
     """
@@ -105,7 +138,6 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
         """
         Start the single-threaded capture strategy.
         """
-        self._index_skipped_frames = 0
         logger.debug("Single-threaded strategy started.")
 
     def get_frame(self, supress_warnings=True):
@@ -124,17 +156,12 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
                 logger.warning("Frame capture failed in single-threaded mode.")
             return None
         
-        if self.frame_filtering == FrameFilteringMethod.SKIP_FRAME:
-            self._index_skipped_frames += 1
-            if self._index_skipped_frames % self._owner()._settings().video.capture.frame_filtering.skip_number == 0:
-                self._index_skipped_frames = 0
-            should_skip_frame = (self._index_skipped_frames == 0)
-            if should_skip_frame > 0:
-                number_of_frames_to_skip = 1
-                # Create a separate thread to skip frames
-                thread = threading.Thread(target=self._skip_frames, args=(number_of_frames_to_skip,))
-                thread.start()
-                thread.join()  # Wait for the thread to complete before proceeding
+        if self._should_skip_frame():
+            number_of_frames_to_skip = 1
+            # Create a separate thread to skip frames
+            thread = threading.Thread(target=self._skip_frames, args=(number_of_frames_to_skip,))
+            thread.start()
+            thread.join()  # Wait for the thread to complete before proceeding
 
         return FrameData(frame, time.time())
 
@@ -282,32 +309,33 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
                 logger.warning("Frame capture failed in multi-threaded mode.")
                 break
 
-            if self._apply_frame_filtering():
+            if self._should_skip_frame():
                 continue
+            if self._should_adapt_queue_size():
+                self._adapt_queue_size()
             
             if not self._queue.full():
                 self._queue.put(FrameData(frame, time.time()))
             else:
                 logger.warning("Frame queue is full; dropping frame in multi-threaded mode.")
 
-    def _apply_frame_filtering(self):
-        should_skip_frame = False
+    def _should_adapt_queue_size(self):
         match self.frame_filtering:
             case FrameFilteringMethod.NONE:
-                pass
+                return False
             case FrameFilteringMethod.SKIP_FRAME:
-                self._index_skipped_frames += 1
-                if self._index_skipped_frames % self._owner()._settings().video.capture.frame_filtering.skip_number == 0:
-                    self._index_skipped_frames = 0
-                should_skip_frame = (self._index_skipped_frames == 0)
+                return False
             case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
                 if self._queue.full():
-                    self._current_max_queue_size *= 2
-                    logger.warning("Doubling the size of the queue to new size %d.", self._current_max_queue_size)
-                    self._resize_queue(self._current_max_queue_size)
+                    return True
             case _:
-                new_method = FrameFilteringMethod.NONE
-        return should_skip_frame
+                return False
+        return False
+
+    def _adapt_queue_size(self, max_size):
+        self._current_max_queue_size *= 2
+        logger.warning("Doubling the size of the queue to new size %d.", self._current_max_queue_size)
+        self._resize_queue(self._current_max_queue_size)
 
     def _resize_queue(self, max_size):
         new_queue = Queue(maxsize=max_size)
@@ -341,7 +369,7 @@ class VideoStreamManager:
 
         self._started = False
         self.capture_strategy = None
-        self.set_strategy(SingleThreadedStrategy(self) if settings.video.capture.threading == "Single" else MultiThreadedStrategy(self))
+        self.set_strategy(SingleThreadedStrategy(self) if settings.video.capture.threading == "SINGLE" else MultiThreadedStrategy(self))
 
     def set_strategy(self, strategy):
         """

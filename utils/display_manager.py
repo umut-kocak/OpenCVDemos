@@ -24,11 +24,12 @@ class DisplayManager:
             default_size (tuple, optional): Default size of the window as (width, height). Defaults to None.
         """
         if resizable:
-            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+            cv2.namedWindow(window_name, cv2.WINDOW_NORMAL | cv2.WINDOW_GUI_NORMAL )
         else:
-            cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE)
+            cv2.namedWindow(window_name, cv2.WINDOW_AUTOSIZE | cv2.WINDOW_GUI_NORMAL )
 
         if default_size:
+            # This will be ignored if resizable is false. The size will be set to what is shown.
             cv2.resizeWindow(window_name, *default_size)
 
         window_rect = cv2.getWindowImageRect(window_name)

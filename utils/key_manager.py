@@ -4,6 +4,7 @@ It allows registering keys with associated callbacks and descriptions, managing 
 and providing a help text summary for the registered keys and their functions.
 """
 
+import keyboard
 
 from utils.logger import logger
 
@@ -60,6 +61,7 @@ class KeyManager:
         Returns:
             bool: False if the key is a quit key, True otherwise.
         """
+        key = self._get_normalized_key(key)
         if key in self._key_callbacks:
             callback, param = self._key_callbacks[key]
             if param is not None:
@@ -107,3 +109,20 @@ class KeyManager:
             bool: True if the key is registered, False otherwise.
         """
         return key in self._key_descriptions
+    def _get_normalized_key(self, key):
+        """
+        Some GUI backends do not distinguish for capital letters.
+        This function provides a standard solution.
+        """
+        # Detect if Shift or Caps Lock is active
+        shift_pressed = keyboard.is_pressed("shift")
+        caps_lock_active = keyboard.is_pressed("caps lock")
+        
+        # Normalize key: Uppercase if Shift or Caps Lock is active
+        if 97 <= key <= 122:  # 'a' to 'z'
+            if shift_pressed ^ caps_lock_active:  # XOR: one but not both is active
+                key = key - 32  # Convert to uppercase
+        elif 65 <= key <= 90:  # 'A' to 'Z'
+            if not (shift_pressed ^ caps_lock_active):
+                key = key + 32  # Convert to lowercase
+        return key

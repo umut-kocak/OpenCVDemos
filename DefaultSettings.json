@@ -1,37 +1,43 @@
 {
     "Settings": {
- 		"video": {
+ 		"print_ocv_info": false,
+		"video": {
 			"capture": {
 				"source": 0,
 				"width": 640,
 				"height": 480,
-				"threading": "Multi",
+				"threading": "MULTI",
 				"frame_filtering": {
 					"method": "NONE",
-					"skip_number": 4
+					"skip_frame": {
+						"action": "SKIP",
+						"period": 4
+					},
+					"adapt_queue_size":{
+					}
 				}
 			}
 		},
 		"display": {
 			"width": 640,
 			"height": 480,
-			"resizable": true,
+			"resizable": false,
 			"resize_output_to_window": false
 		},
  		"frame": {
 			"wait_time": 1,
 			"missing_to_tolerate": 500,
 			"processing": {
-				"resize_capture_before_process": true,
-				"width": 400,
-				"height": 300
+				"resize_capture_before_process": false,
+				"width": 320,
+				"height": 240
 			},
 			"timer": {
 				"calculation_frequency": 30
 			}
 		},
  		"stats": {
-			"show_help": true,
+			"show_help": false,
 			"show_stats": true,
 			"calculation_frequency": 30,
 			"detailed": false,

@@ -1,8 +1,15 @@
-name: my_environment  # Replace with your desired environment name
+name: demo_env
 channels:
   - conda-forge
+  - pytorch
+  - nvidia
   - defaults
 dependencies:
-  - python=3.13.1  # The specific version isn't specified; add if required
+  - python=3.12
+  - pytorch=2.5.0
+  - pytorch-cuda=12.4
+  - torchaudio=2.5.0
+  - torchvision=0.20.0
   - numpy=2.2.0  # If available; adjust if version isn't in Conda
-  - opencv=4.10  # Includes contrib modules in conda-forge
+  - opencv=4.10  # Includes contrib modules in conda-forge #opencv-contrib-python==4.10.0.84
+  - keyboard
