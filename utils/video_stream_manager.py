@@ -48,7 +48,7 @@ class VideoCaptureStrategy:
         """
         self._owner = weakref.ref(owner)
         self.frame_filtering = FrameFilteringMethod.NONE
-        self.set_frame_filtering_method( FrameFilteringMethod.get_from_string(self._owner()._settings().video_capture_frame_filter_metod) )
+        self.set_frame_filtering_method( FrameFilteringMethod.get_from_string(self._owner()._settings().video.capture.frame_filtering.method) )
 
     def get_frame(self, supress_warnings=False):
         """
@@ -126,7 +126,7 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
         
         if self.frame_filtering == FrameFilteringMethod.SKIP_FRAME:
             self._index_skipped_frames += 1
-            if self._index_skipped_frames % self._owner()._settings().video_capture_frame_filter_skip_number == 0:
+            if self._index_skipped_frames % self._owner()._settings().video.capture.frame_filtering.skip_number == 0:
                 self._index_skipped_frames = 0
             should_skip_frame = (self._index_skipped_frames == 0)
             if should_skip_frame > 0:
@@ -297,7 +297,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
                 pass
             case FrameFilteringMethod.SKIP_FRAME:
                 self._index_skipped_frames += 1
-                if self._index_skipped_frames % self._owner()._settings().video_capture_frame_filter_skip_number == 0:
+                if self._index_skipped_frames % self._owner()._settings().video.capture.frame_filtering.skip_number == 0:
                     self._index_skipped_frames = 0
                 should_skip_frame = (self._index_skipped_frames == 0)
             case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
@@ -329,11 +329,11 @@ class VideoStreamManager:
             settings: The settings file.
         """
         self._settings = weakref.ref(settings)
-        self._capture = cv2.VideoCapture(settings.video_source)
-        self._is_camera = (settings.video_source == 0)
-        if settings.input_width and settings.input_height:
-            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, settings.input_width)
-            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.input_height)
+        self._capture = cv2.VideoCapture(settings.video.capture.source)
+        self._is_camera = (settings.video.capture.source == 0)
+        if settings.video.capture.width and settings.video.capture.height:
+            self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, settings.video.capture.width)
+            self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.video.capture.height)
 
         self.width = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -341,7 +341,7 @@ class VideoStreamManager:
 
         self._started = False
         self.capture_strategy = None
-        self.set_strategy(SingleThreadedStrategy(self) if settings.video_capture_threading == "Single" else MultiThreadedStrategy(self))
+        self.set_strategy(SingleThreadedStrategy(self) if settings.video.capture.threading == "Single" else MultiThreadedStrategy(self))
 
     def set_strategy(self, strategy):
         """

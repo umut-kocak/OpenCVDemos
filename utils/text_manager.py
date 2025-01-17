@@ -19,7 +19,7 @@ class TextProperties:
     BLUE = (255, 0, 0)
     WHITE = (255, 255, 255)
 
-    def __init__(self, y_spacing=20, color=WHITE, thickness=1, font_scale=0.5,
+    def __init__(self, y_spacing=15, color=WHITE, thickness=1, font_scale=0.3,
                  font_face=cv2.FONT_HERSHEY_SIMPLEX, line_type=cv2.LINE_AA):
         """
         Initialize text properties.

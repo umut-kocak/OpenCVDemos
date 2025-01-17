@@ -22,7 +22,7 @@ class KeyManager:
         self._quit_keys = []  # List of keys that signal quitting.
 
     def register_key(self, key, description, callback,
-                     param=None, is_quit_key=False):
+                     param=None, is_quit_key=False, name_space="Default"):
         """
         Register a key with a callback and description.
 
@@ -32,6 +32,7 @@ class KeyManager:
             callback (callable): The function to execute when the key is pressed.
             param (optional): An optional parameter to pass to the callback.
             is_quit_key (bool): If True, pressing this key will signal quitting.
+            name_space (str): A name_space for grouping keys.
 
         Raises:
             ValueError: If the key or callback is invalid.
@@ -43,7 +44,7 @@ class KeyManager:
             logger.warning("%s is already registered.", chr(key))
             return
 
-        self._key_descriptions[key] = description
+        self._key_descriptions[key] = (description, name_space)
         self._key_callbacks[key] = (callback, param)
 
         if is_quit_key:
@@ -68,15 +69,25 @@ class KeyManager:
 
         return key not in self._quit_keys
 
-    def get_help_text(self):
+    def get_help_text(self, name_space="Default"):
         """
         Get a list of key descriptions for display or logging.
-
+    
+        Args:
+            name_space (str, optional): Namespace to filter keys by. 
+                                        If None, include all namespaces.
+    
         Returns:
             list: A list of strings in the format "Key: Description".
         """
-        return [f"{chr(key)}: {desc}" for key,
-                desc in self._key_descriptions.items()]
+        # Filter keys based on the namespace
+        filtered_keys = [
+            (key, desc) for key, (desc, ns) in self._key_descriptions.items()
+            if name_space is None or name_space == ns
+        ]
+        
+        # Return the formatted list of strings
+        return [f"{chr(key)}: {desc}" for key, desc in filtered_keys]
 
     def print_help(self):
         """

@@ -49,17 +49,17 @@ class BaseVideoDemo(ABC):
         self._video_manager.start()
 
         DisplayManager.create_window(self.get_window_name(),
-                                     resizable=self.settings.resizable_window,
-                                     default_size=(self.settings.window_width, self.settings.window_height))
+                                     resizable=self.settings.display.resizable,
+                                     default_size=(self.settings.display.width, self.settings.display.height))
 
         self._key_manager = KeyManager()
-        self._stats_manager = StatsManager(calculation_frequency=30)
+        self._stats_manager = StatsManager(calculation_frequency=self.settings.stats.calculation_frequency)
         self._text_manager = TextManager()
         self._text_manager.register_properties(
             "stats", TextProperties(color=TextProperties.GREEN))
 
         self._visual_debugger = VisualDebugger()
-        self._frame_timer = FrameTimer(calculation_frequency=30)
+        self._frame_timer = FrameTimer(calculation_frequency=self.settings.frame.timer.calculation_frequency)
 
         self.register_keys()
 
@@ -81,14 +81,14 @@ class BaseVideoDemo(ABC):
     def resize_to_process_frame(self, frame):
         """.Resizes the frame from video to the desired size for the processing."""
         frame.image = cv2.resize(frame.image,
-            (self.settings.process_width, self.settings.process_height),
+            (self.settings.frame.processing.width, self.settings.frame.processing.height),
             interpolation=cv2.INTER_LINEAR)
         return frame
 
     def resize_from_process_frame(self, frame):
-        """.Resizes the output of the processing back to the original video frame size."""
+        """Resizes the output of the processing back to the original video frame size."""
         frame.image = cv2.resize(frame.image,
-            (self.settings.input_width, self.settings.input_height),
+            (self._video_manager.width, self._video_manager.height),
             interpolation=cv2.INTER_LINEAR)
         return frame
 
@@ -101,33 +101,43 @@ class BaseVideoDemo(ABC):
     def frame_loop_end(self, frame):
         """Handle post-frame operations such as displaying and stats updates."""
         self._stats_manager.update_stat(
-            "FrWaitT(ms)", self.settings.frame_wait_time)
+            "FrWaitT(ms)", self.settings.frame.wait_time)
         self._stats_manager.update_stat(
             "VidQueueSize", self._video_manager.get_queue_size())
         self._stats_manager.update_stat(
-            "VidSkipFrame", self.settings.video_capture_frame_filter_skip_number if self._video_manager.capture_strategy.frame_filtering.value == 2 else 0)
+            "VidSkipFrame", self.settings.video.capture.frame_filtering.skip_number if self._video_manager.capture_strategy.frame_filtering.value == 2 else 0)
 
-        if self.settings.show_help:
-            x, y = (int(0.2 * self._video_manager.width),
-                    int(0.2 * self._video_manager.height))
+        if self.settings.stats.show_help:
+            # Base help text
+            x, y = self.settings.stats.default_help_text_position
+            x, y = (int( x * self._video_manager.width),
+                    int( y * self._video_manager.height))
             self._text_manager.draw_text(
                 frame.image, self._key_manager.get_help_text(), pos=(x, y))
+            
+            # Module-specific help text
+            x, y = self.settings.stats.demo_help_text_position
+            x, y = (int( x * self._video_manager.width),
+                    int( y * self._video_manager.height))
+            self._text_manager.draw_text(
+                frame.image, self._key_manager.get_help_text(self.get_window_name()), pos=(x, y))
 
-        if self.settings.show_stats:
-            x, y = (int(0.02 * self._video_manager.width),
-                    int(0.05 * self._video_manager.height))
+        if self.settings.stats.show_stats:
+            x, y = self.settings.stats.text_position
+            x, y = (int( x * self._video_manager.width),
+                    int( y * self._video_manager.height))
             self._text_manager.draw_text(
                 frame.image,
-                self._frame_timer.get_formatted_stats(self.settings.detailedStats) +
-                    self._stats_manager.get_formatted_stats(self.settings.detailedStats),
+                self._frame_timer.get_formatted_stats(self.settings.stats.detailed) +
+                    self._stats_manager.get_formatted_stats(self.settings.stats.detailed),
                 pos=(x, y),
                 properties="stats",
             )
 
         DisplayManager.show_frame(self.get_window_name(
-        ), frame.image, self.settings.resize_output_to_window)
+        ), frame.image, self.settings.display.resize_output_to_window)
 
-        key = cv2.waitKey(self.settings.frame_wait_time) & 0xFF
+        key = cv2.waitKey(self.settings.frame.wait_time) & 0xFF
         # cv2.waitKey is the actual call causing anything to be drawn, so
         # measure latency after this.
         self._stats_manager.update_stat(
@@ -138,7 +148,7 @@ class BaseVideoDemo(ABC):
 
     def pause_loop(self):
         """."""
-        key = cv2.waitKey(self.settings.frame_wait_time) & 0xFF
+        key = cv2.waitKey(self.settings.frame.wait_time) & 0xFF
         if not self._key_manager.check_events(key):
             self._quit_loop = True
             return False
@@ -181,17 +191,19 @@ class BaseVideoDemo(ABC):
                 # tolerated limits
                 self._number_of_null_frames += 1
                 self._frame_timer.undo_start_frame()
-                if self.settings.missing_frames_to_tolerate > 0 and self._number_of_null_frames > self.settings.missing_frames_to_tolerate:
+                nr_tolerate = self.settings.frame.missing_to_tolerate
+                if nr_tolerate > 0 and self._number_of_null_frames > nr_tolerate:
                     # Too many None frames, Quit the main loop
+                    logger.warning("Too many None frames, Quitting the main loop.")
                     break
                 continue
 
             # Processing the frame
             self._frame_timer.begin_label("PocessT(ms)")
-            if self.settings.resize_input_to_process:
+            if self.settings.frame.processing.resize_capture_before_process:
                 frame = self.resize_to_process_frame(frame)
             frame = self.process_frame(frame)
-            if self.settings.resize_input_to_process:
+            if self.settings.frame.processing.resize_capture_before_process:
                 frame = self.resize_from_process_frame(frame)
             self._frame_timer.end_label("PocessT(ms)")
 
@@ -207,71 +219,59 @@ class BaseVideoDemo(ABC):
 
     def register_keys(self):
         """Register keys and their respective handlers."""
-
-        self._key_manager.register_key(
-            ord('q'), "Quit the application", self.cleanup, None, True)
-        self._key_manager.register_key(
-            ord(' '), "Pause", self.toggle_pause, None)
-
-        self._key_manager.register_key(
-            ord('h'), "Print help text", self._key_manager.print_help, None)
-        self._key_manager.register_key(ord('H'), "Show help text",
-                                       lambda settings: setattr(
-                                           settings, 'show_help', not getattr(settings, 'show_help')),
-                                       self.settings)
-
-        self._key_manager.register_key(ord('s'), "Toggle stats",
-                                       lambda settings: (setattr(settings, 'show_stats', not getattr(
-                                           settings, 'show_stats')), setattr(settings, 'detailedStats', False)),
-                                       self.settings)
-
-        self._key_manager.register_key(ord('S'), "Toggle stats(detailed)",
-                                       lambda settings: (setattr(settings, 'show_stats', not getattr(
-                                           settings, 'show_stats')), setattr(settings, 'detailedStats', True)),
-                                       self.settings)
-
-        self._key_manager.register_key(ord('d'), "Enable/Disable VisualDebugger.",
-                                       lambda debugger: debugger.toggle(),
-                                       self._visual_debugger)
-        self._key_manager.register_key(ord('D'), "Toggle VisualDebugger mode: Override or Separate.",
-                                       lambda debugger: debugger.toggle_mode(),
-                                       self._visual_debugger)
-        self._key_manager.register_key(ord('+'), "Override next VisualDebugger image.",
-                                       lambda debugger: debugger.isEnabled() and debugger.override_next(),
-                                       self._visual_debugger)
-        self._key_manager.register_key(ord('-'), "Override previous VisualDebugger image.",
-                                       lambda debugger: debugger.isEnabled() and debugger.override_previous(),
-                                       self._visual_debugger)
-
-        self._key_manager.register_key(ord('V'), "Toggle VideoCapture mode: Single or multithreaded.",
-                                       lambda vid_manager: vid_manager.toggle_strategy(),
-                                       self._video_manager)
-        self._key_manager.register_key(ord('u'), "Increase waiting time at the end of the frame.",
-                                       lambda settings: setattr(settings, 'frame_wait_time', getattr(
-                                           settings, 'frame_wait_time') + 1),
-                                       self.settings)
-        self._key_manager.register_key(ord('j'), "Decrease waiting time at the end of the frame.",
-                                       lambda settings: setattr(settings, 'frame_wait_time', max(
-                                           1, getattr(settings, 'frame_wait_time') - 1)),
-                                       self.settings)
-
-        self._key_manager.register_key(ord('C'), "Save the current settings.",
-                                       lambda settings: settings.save_to_json(
-                                           "CurrentSettings.json"),
-                                       self.settings)
-
-        self._key_manager.register_key(ord('f'), "Change the frame filter method of video capture strategy.",
-                                       lambda manager: ( manager.capture_strategy.set_frame_filtering_method(manager.capture_strategy.frame_filtering.next()) ),
-                                       self._video_manager)
-
-        self._key_manager.register_key(ord('i'), "Increase video_capture_frame_filter_skip_number.",
-                                       lambda settings: setattr(settings, 'video_capture_frame_filter_skip_number', getattr(
-                                           settings, 'video_capture_frame_filter_skip_number') + 1),
-                                       self.settings)
-        self._key_manager.register_key(ord('k'), "Decrease video_capture_frame_filter_skip_number.",
-                                       lambda settings: setattr(settings, 'video_capture_frame_filter_skip_number', max(
-                                           2, getattr(settings, 'video_capture_frame_filter_skip_number') - 1)),
-                                       self.settings)
+        
+        def toggle_show_help(settings):
+            setattr(settings, 'show_help', not getattr(settings, 'show_help'))
+        
+        def toggle_stats(settings, detailed=False):
+            setattr(settings, 'show_stats', not getattr(settings, 'show_stats'))
+            setattr(settings, 'detailed', detailed)
+        
+        def adjust_wait_time(settings, delta):
+            new_time = max(1, getattr(settings, 'wait_time') + delta)
+            setattr(settings, 'wait_time', new_time)
+    
+        def adjust_skip_number(settings, delta):
+            new_skip = max(2, getattr(settings, 'skip_number') + delta)
+            setattr(settings, 'skip_number', new_skip)
+        
+        key_bindings = [
+            # General keys
+            (ord('q'), "Quit the application", self.cleanup, None, True),
+            (ord(' '), "Pause", self.toggle_pause, None),
+            (ord('h'), "Print help text", self._key_manager.print_help, None),
+            (ord('H'), "Show help text", toggle_show_help, self.settings.stats),
+            
+            # Stats toggling
+            (ord('s'), "Toggle stats", lambda s: toggle_stats(s, detailed=False), self.settings.stats),
+            (ord('S'), "Toggle stats (detailed)", lambda s: toggle_stats(s, detailed=True), self.settings.stats),
+            
+            # Visual Debugger
+            (ord('d'), "Enable/Disable VisualDebugger", lambda dbg: dbg.toggle(), self._visual_debugger),
+            (ord('D'), "Toggle VisualDebugger mode: Override or Separate.", lambda dbg: dbg.toggle_mode(), self._visual_debugger),
+            (ord('+'), "Override next VisualDebugger image.", lambda dbg: dbg.isEnabled() and dbg.override_next(), self._visual_debugger),
+            (ord('-'), "Override previous VisualDebugger image.", lambda dbg: dbg.isEnabled() and dbg.override_previous(), self._visual_debugger),
+            
+            # Video Manager
+            (ord('V'), "Toggle VideoCapture mode: Single or multithreaded.", lambda vm: vm.toggle_strategy(), self._video_manager),
+            (ord('f'), "Change the frame filter method of video capture strategy.", 
+            lambda vm: vm.capture_strategy.set_frame_filtering_method(vm.capture_strategy.frame_filtering.next()), self._video_manager),
+            
+            # Frame settings
+            (ord('u'), "Increase waiting time at the end of the frame.", lambda s: adjust_wait_time(s, +1), self.settings.frame),
+            (ord('j'), "Decrease waiting time at the end of the frame.", lambda s: adjust_wait_time(s, -1), self.settings.frame),
+            
+            # Saving and settings
+            (ord('C'), "Save the current settings.", lambda s: s.save_to_json("CurrentSettings.json"), self.settings),
+            
+            # Video capture skip number
+            (ord('i'), "Increase video_capture_frame_filter_skip_number.", lambda s: adjust_skip_number(s, +1), self.settings.video.capture.frame_filtering),
+            (ord('k'), "Decrease video_capture_frame_filter_skip_number.", lambda s: adjust_skip_number(s, -1), self.settings.video.capture.frame_filtering),
+        ]
+    
+        # Register all key bindings
+        for key, description, callback, callback_arg, *args in key_bindings:
+            self._key_manager.register_key(key, description, callback, callback_arg, *args)
 
     def get_demo_folder(self):
         """ Gets the folder(Path) where the demo resides."""

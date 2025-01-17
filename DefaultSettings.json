@@ -1,26 +1,43 @@
 {
     "Settings": {
-        "input_width": 640,
-        "input_height": 480,
-        "window_width": 640,
-        "window_height": 480,
-        "resizable_window": true,
-
-        "video_source": 0,
-        "video_capture_threading": "Multi",
-		"video_capture_frame_filter_metod": "NONE",
-		"video_capture_frame_filter_skip_number": 4,
-
-        "resize_input_to_process": true,
-        "resize_output_to_window": false,
-        "process_width": 400,
-        "process_height": 300,
-
-        "frame_wait_time": 1,
-        "missing_frames_to_tolerate": 200,
-
-        "show_help": true,
-        "show_stats": true,
-        "detailedStats": false
+ 		"video": {
+			"capture": {
+				"source": 0,
+				"width": 640,
+				"height": 480,
+				"threading": "Multi",
+				"frame_filtering": {
+					"method": "NONE",
+					"skip_number": 4
+				}
+			}
+		},
+		"display": {
+			"width": 640,
+			"height": 480,
+			"resizable": true,
+			"resize_output_to_window": false
+		},
+ 		"frame": {
+			"wait_time": 1,
+			"missing_to_tolerate": 500,
+			"processing": {
+				"resize_capture_before_process": true,
+				"width": 400,
+				"height": 300
+			},
+			"timer": {
+				"calculation_frequency": 30
+			}
+		},
+ 		"stats": {
+			"show_help": true,
+			"show_stats": true,
+			"calculation_frequency": 30,
+			"detailed": false,
+			"text_position" : [0.02, 0.05],
+			"default_help_text_position" : [0.02, 0.3],
+			"demo_help_text_position" : [0.52, 0.3]
+		}
     }
 }

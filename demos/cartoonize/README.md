@@ -1,6 +1,6 @@
-# Styling Demo
+# Cartoonize Demo
 
-This project provides a real-time **Styling Demo** built upon the `BaseVideoDemo` framework.  
+This project provides a real-time **Cartoonize Demo** built upon the `BaseVideoDemo` framework.  
 The application applies various stylization effects to video frames in real-time, leveraging OpenCV's
 advanced image processing capabilities. Users can switch between different stylization modes interactively
 during the demo. This demo includes a user-friendly interface for visualizing processed video frames and
@@ -17,7 +17,7 @@ logs runtime events for debugging and analysis.
      - **Stylization**: Applies artistic stylization for a painting-like effect.
 
 2. **Real-Time Visualization**:
-   - Processed frames are displayed in a window titled "Styling Demo".
+   - Processed frames are displayed in a window titled "Cartoonize Demo".
 
 3. **Keyboard Interaction**:
    - Users can press the `m` key to cycle through the available stylization modes.

@@ -1,0 +1,45 @@
+{
+    "Settings": {
+
+        "demo": {
+            "sigma_s0": 60,
+            "sigma_s1": 10,
+            "sigma_s2": 60,
+            "sigma_s3": 60,
+            "sigma_s4": 60,
+            "sigma_r0": 0.4,
+            "sigma_r1": 0.15,
+            "sigma_r2": 0.07,
+            "sigma_r3": 0.07,
+            "sigma_r4": 0.07
+        },
+        "video": {
+            "capture": {
+                "threading": "Multi",
+                "frame_filtering": {
+                    "method": "SKIP",
+                    "skip_number": 4
+                }
+            }
+        },
+        "display": {
+            "width": 640,
+            "height": 480,
+            "resizable": true,
+            "resize_output_to_window": false
+        },
+        "frame": {
+            "wait_time": 1,
+            "missing_to_tolerate": -200,
+            "processing": {
+                "resize_capture_before_process": true,
+                "width": 400,
+                "height": 300
+            }
+        },
+        "stats": {
+            "show_help": true,
+            "show_stats": true
+        }
+    }
+}

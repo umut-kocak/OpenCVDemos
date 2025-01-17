@@ -34,8 +34,8 @@ from utils.face_detector import FaceDetector # pylint: disable=C0413
 class FaceDetectionDemo(BaseVideoDemo):
     """Demo for detecting faces in video frames."""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, source=0):
+        super().__init__(source)
         self._face_detector = FaceDetector()
 
     def process_frame(self, frame):
