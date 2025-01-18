@@ -5,35 +5,15 @@ utilities to identify faces in each frame and replaces the background with a pro
 The demo initializes a logger for tracking runtime events and provides a user interface window for visualizing
 the processed video output.
 """
-import logging
-import os
-import time
-
 import cv2
 import numpy as np
 import torch
 from torchvision import models, transforms
 from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
-from utils.logger_initializer import initialize_logger
-
-# Initialize the global logger before importing other modules
-logger_name = os.path.splitext(os.path.basename(__file__))[0]
-logger_file_name = logger_name + time.strftime("%Y%m%d-%H%M%S") + ".log"
-
-initialize_logger(
-    logger_name,
-    logger_file_name,
-    _log_to_console=True,
-    _log_to_file=logger_file_name,
-    _console_level=logging.DEBUG,
-    _file_level=logging.DEBUG
-)
-
-
-from utils.base_module import BaseVideoDemo # pylint: disable=C0413
-from utils.background_remover import BackgroundRemover # pylint: disable=C0413
-from utils.background_remover import Segmentation, SegmentationClass # pylint: disable=C0413
+from utils.base_module import BaseVideoDemo
+from utils.background_remover import BackgroundRemover
+from utils.background_remover import Segmentation, SegmentationClass
 
 class BackgroundRemovalDemo(BaseVideoDemo):
     """Demo for replacing the background in video frames."""

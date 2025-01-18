@@ -13,3 +13,6 @@ dependencies:
   - numpy=2.2.0  # If available; adjust if version isn't in Conda
   - opencv=4.10  # Includes contrib modules in conda-forge #opencv-contrib-python==4.10.0.84
   - keyboard
+  - pip
+  - pip:
+    - mediapipe

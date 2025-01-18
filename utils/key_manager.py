@@ -3,11 +3,13 @@ This module provides the `KeyManager` class for handling keyboard events in an a
 It allows registering keys with associated callbacks and descriptions, managing quit keys,
 and providing a help text summary for the registered keys and their functions.
 """
-
-import keyboard
+have_keyboard = True
+try:
+    import keyboard
+except:
+    have_keyboard = False
 
 from utils.logger import logger
-
 
 class KeyManager:
     """
@@ -114,6 +116,9 @@ class KeyManager:
         Some GUI backends do not distinguish for capital letters.
         This function provides a standard solution.
         """
+        global have_keyboard
+        if not have_keyboard:
+            return key
         # Detect if Shift or Caps Lock is active
         shift_pressed = keyboard.is_pressed("shift")
         caps_lock_active = keyboard.is_pressed("caps lock")

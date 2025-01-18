@@ -1,36 +1,29 @@
 """
-This module implements a `FaceDetectionDemo` class that extends the `BaseVideoDemo` framework to
-perform real-time face detection in video streams. It uses the `FaceDetector` utility to identify
-faces in each frame and overlays rectangles around detected faces. The demo initializes a logger
-for tracking runtime events and provides a user interface window for visualizing the processed
-video output.
 """
 import cv2
 
 from utils.base_module import BaseVideoDemo
-from utils.face_detector import FaceDetector, HaarCascadeFaceDetection, OCVDnnFaceDetection
+from utils.hand_detector import HandDetector, MediaPipeHandDetection, ContourBasedHandDetection
 from utils.logger import logger
 
 
-class FaceDetectionDemo(BaseVideoDemo):
+class HandDetectionDemo(BaseVideoDemo):
     """Demo for detecting faces in video frames."""
 
     def __init__(self):
         super().__init__()
 
         self._strategies = {
-            0: OCVDnnFaceDetection,
-            1: HaarCascadeFaceDetection,
+            0: MediaPipeHandDetection,
+            1: ContourBasedHandDetection,
         }
         self._current_strategy = 0
-        self._face_detector = FaceDetector(self._create_strategy(self._current_strategy))
+        self._detector = HandDetector(self._create_strategy(self._current_strategy))
 
     def process_frame(self, frame):
         """Detect faces and draw rectangles around them."""
 
-        faces = self._face_detector.detect_faces(frame.image)
-        for (x, y, w, h) in faces:
-            cv2.rectangle(frame.image, (x, y), (x + w, y + h), (255, 0, 0), 2)
+        frame.image = self._detector.detect_hands(frame.image)
         return frame
 
     def register_keys(self):
@@ -39,12 +32,12 @@ class FaceDetectionDemo(BaseVideoDemo):
 
         - Press 'm' to cycle through the available stylization modes.
         """
-        super(FaceDetectionDemo, self).register_keys()
+        super(HandDetectionDemo, self).register_keys()
 
         def adjust_detection_strategy(demo, delta):
             demo._current_strategy = (demo._current_strategy + delta) % len(demo._strategies)
             logger.info("Changing detection to strategy %s ", demo._strategies.get(demo._current_strategy))
-            demo._face_detector.set_strategy(demo._create_strategy(demo._current_strategy))
+            demo._detector.set_strategy(demo._create_strategy(demo._current_strategy))
 
         key_bindings = [
             # General keys
@@ -57,7 +50,7 @@ class FaceDetectionDemo(BaseVideoDemo):
 
     def get_window_name(self):
         """Return the name of the demo window."""
-        return "Face Detection Demo"
+        return "Hand Detection Demo"
 
     def _create_strategy(self, strategy_key, **kwargs):
         """
@@ -68,7 +61,7 @@ class FaceDetectionDemo(BaseVideoDemo):
             kwargs: Additional arguments required by specific strategies.
     
         Returns:
-            FaceDetectionStrategy: An instantiated strategy object.
+            HandDetectionStrategy: An instantiated strategy object.
     
         Raises:
             ValueError: If the strategy_key is not valid.
@@ -81,5 +74,5 @@ class FaceDetectionDemo(BaseVideoDemo):
 
 
 if __name__ == "__main__":
-    demo = FaceDetectionDemo()
+    demo = HandDetectionDemo()
     demo.run()

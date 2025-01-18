@@ -16,6 +16,13 @@
 					"adapt_queue_size":{
 					}
 				}
+			},
+			"output": {
+				"file_name": "output_video.avi",
+				"fourcc": "XVID",
+				"width": 640,
+				"height": 480,
+				"fps": 30
 			}
 		},
 		"display": {

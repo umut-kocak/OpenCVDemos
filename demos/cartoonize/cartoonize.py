@@ -7,30 +7,10 @@ enhancement, pencil sketch, and stylization.
 Usage:
 Press 'm' during the demo to change the stylization mode.
 """
-
-import logging
-import os
-import time
-
 import cv2
 
-from utils.logger_initializer import initialize_logger
-
-# Initialize the global logger before importing other modules
-logger_name = os.path.splitext(os.path.basename(__file__))[0]
-logger_file_name = logger_name + time.strftime("%Y%m%d-%H%M%S") + ".log"
-
-initialize_logger(
-    logger_name,
-    logger_file_name,
-    _log_to_console=True,
-    _log_to_file=logger_file_name,
-    _console_level=logging.DEBUG,
-    _file_level=logging.DEBUG
-)
-
-from utils.base_module import BaseVideoDemo  # pylint: disable=C0413
-from utils.face_detector import FaceDetector  # pylint: disable=C0413
+from utils.base_module import BaseVideoDemo
+from utils.face_detector import FaceDetector
 
 
 class CartoonizeDemo(BaseVideoDemo):

@@ -332,7 +332,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
                 return False
         return False
 
-    def _adapt_queue_size(self, max_size):
+    def _adapt_queue_size(self):
         self._current_max_queue_size *= 2
         logger.warning("Doubling the size of the queue to new size %d.", self._current_max_queue_size)
         self._resize_queue(self._current_max_queue_size)
@@ -349,7 +349,7 @@ class VideoStreamManager:
     Manages video stream capture with support for strategy patterns.
     """
 
-    def __init__(self, settings):
+    def __init__(self, settings, source_path="./"):
         """
         Initialize the video stream manager.
 
@@ -357,15 +357,17 @@ class VideoStreamManager:
             settings: The settings file.
         """
         self._settings = weakref.ref(settings)
-        self._capture = cv2.VideoCapture(settings.video.capture.source)
-        self._is_camera = (settings.video.capture.source == 0)
+        capture_source = 0 if settings.video.capture.source == 0 else source_path / settings.video.capture.source
+        self._capture = cv2.VideoCapture(capture_source)
+        self._is_camera = (capture_source == 0)
         if settings.video.capture.width and settings.video.capture.height:
             self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, settings.video.capture.width)
             self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.video.capture.height)
 
         self.width = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        logger.debug("Video captured with dimensions: %dx%d", self.width, self.height)
+        self.fps = int(self._capture.get(cv2.CAP_PROP_FPS))        
+        logger.debug("Video captured with dimensions: %dx%d and %d fps", self.width, self.height, self.fps)
 
         self._started = False
         self.capture_strategy = None

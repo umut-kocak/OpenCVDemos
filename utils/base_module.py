@@ -13,21 +13,42 @@ Subclass `BaseVideoDemo` and override required methods to create custom video de
 """
 from abc import ABC, abstractmethod
 import os
+import logging
 from pathlib import Path
 import sys
 import time
 
 import cv2
 
-from utils.display_manager import DisplayManager
-from utils.frame_timer import FrameTimer
-from utils.key_manager import KeyManager
-from utils.logger import logger
-from utils.settings import Settings
-from utils.stats_manager import StatsManager
-from utils.text_manager import TextManager, TextProperties
-from utils.video_stream_manager import VideoStreamManager
-from utils.visual_debugger import VisualDebugger
+# Initialize the global logger before importing other modules
+def get_entry_point_filename():
+    filename_with_ext = os.path.basename(sys.argv[0])
+    filename = os.path.splitext(filename_with_ext)[0]
+    return filename
+
+logger_name = get_entry_point_filename()
+logger_time = time.strftime("%Y%m%d-%H%M%S")
+logger_file_name = logger_name + '-' + logger_time + ".log"
+from utils.logger_initializer import initialize_logger
+initialize_logger(
+    logger_name,
+    logger_file_name,
+    _log_to_console=True,
+    _log_to_file=logger_file_name,
+    _console_level=logging.DEBUG,
+    _file_level=logging.DEBUG
+)
+
+# Import modules after the global logger is initialized
+from utils.display_manager import DisplayManager  # pylint: disable=C0413
+from utils.frame_timer import FrameTimer  # pylint: disable=C0413
+from utils.key_manager import KeyManager  # pylint: disable=C0413
+from utils.logger import logger  # pylint: disable=C0413
+from utils.settings import Settings  # pylint: disable=C0413
+from utils.stats_manager import StatsManager  # pylint: disable=C0413
+from utils.text_manager import TextManager, TextProperties  # pylint: disable=C0413
+from utils.video_stream_manager import VideoStreamManager  # pylint: disable=C0413
+from utils.visual_debugger import VisualDebugger  # pylint: disable=C0413
 
 SEC_TO_MSEC = 1000
 
@@ -47,7 +68,7 @@ class BaseVideoDemo(ABC):
             print(cv2.getBuildInformation())
 
         # Handlers
-        self._video_manager = VideoStreamManager(self.settings)
+        self._video_manager = VideoStreamManager(self.settings, source_path=self.get_assets_folder())
         self._video_manager.start()
 
         DisplayManager.create_window(self.get_window_name(),
@@ -264,7 +285,7 @@ class BaseVideoDemo(ABC):
             (ord('j'), "Decrease waiting time at the end of the frame.", lambda s: adjust_wait_time(s, -1), self.settings.frame),
             
             # Saving and settings
-            (ord('C'), "Save the current settings.", lambda s: s.save_to_json("CurrentSettings.json"), self.settings),
+            (ord('C'), "Save the current settings.", lambda s: s.save_to_json(self.get_demo_folder()/"CurrentSettings.json"), self.settings),
             
             # Video capture skip number
             (ord('i'), "Increase video_capture_frame_filter_skip_number.", lambda s: adjust_skip_period(s, +1), self.settings.video.capture.frame_filtering.skip_frame),
@@ -280,6 +301,20 @@ class BaseVideoDemo(ABC):
         module_name = self.__class__.__module__
         module_file = sys.modules[module_name].__file__
         return Path(os.path.dirname(os.path.abspath(module_file)))
+
+    def get_assets_folder(self):
+        """ Gets the folder(Path) where the demo assets reside."""
+        full_path = self.get_demo_folder() / "assets"
+        if full_path.exists():
+            return full_path
+        return None
+
+    def get_output_folder(self):
+        """ Gets the folder(Path) where the demo should save outputs."""
+        global logger_time
+        _output_path = self.get_demo_folder() / ("output-" + logger_time )
+        Path(_output_path).mkdir(parents=True, exist_ok=True)
+        return _output_path
 
     def get_demo_settings_file_path(self):
         """ Gets the (local) settings file within the specific demo folder."""
