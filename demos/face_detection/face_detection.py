@@ -8,22 +8,31 @@ video output.
 import cv2
 
 from utils.base_module import BaseVideoDemo
+from utils.class_factory import ClassFactory
 from utils.face_detector import FaceDetector, HaarCascadeFaceDetection, OCVDnnFaceDetection
 from utils.logger import logger
-
 
 class FaceDetectionDemo(BaseVideoDemo):
     """Demo for detecting faces in video frames."""
 
     def __init__(self):
         super().__init__()
-
-        self._strategies = {
-            0: OCVDnnFaceDetection,
-            1: HaarCascadeFaceDetection,
+        strategies = {
+            0: ( OCVDnnFaceDetection,
+                {
+                "model_path": self.get_asset_path("models/res10_300x300_ssd_iter_140000.caffemodel"), 
+                "config_path": self.get_asset_path("models/deploy.proto.txt") }
+            ),
+            1: ( HaarCascadeFaceDetection,
+                {
+                "model_path": self.get_asset_path("./models/haarcascade_frontalface_default.xml")
+                }
+            )
         }
+        self._strategy_factory = ClassFactory( strategies )
         self._current_strategy = 0
-        self._face_detector = FaceDetector(self._create_strategy(self._current_strategy))
+        self._number_of_strategies = len(strategies)
+        self._face_detector = FaceDetector(self._strategy_factory.create_class(self._current_strategy))
 
     def process_frame(self, frame):
         """Detect faces and draw rectangles around them."""
@@ -42,9 +51,9 @@ class FaceDetectionDemo(BaseVideoDemo):
         super(FaceDetectionDemo, self).register_keys()
 
         def adjust_detection_strategy(demo, delta):
-            demo._current_strategy = (demo._current_strategy + delta) % len(demo._strategies)
-            logger.info("Changing detection to strategy %s ", demo._strategies.get(demo._current_strategy))
-            demo._face_detector.set_strategy(demo._create_strategy(demo._current_strategy))
+            demo._current_strategy = (demo._current_strategy + delta) % self._number_of_strategies
+            logger.info("Changing detection to strategy %s ", demo._strategy_factory.get_class(demo._current_strategy))
+            demo._face_detector.set_strategy(demo._strategy_factory.create_class(demo._current_strategy))
 
         key_bindings = [
             # General keys

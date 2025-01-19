@@ -14,6 +14,7 @@ from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 from utils.base_module import BaseVideoDemo
 from utils.background_remover import BackgroundRemover
 from utils.background_remover import Segmentation, SegmentationClass
+from utils.logger import logger
 
 class BackgroundRemovalDemo(BaseVideoDemo):
     """Demo for replacing the background in video frames."""
@@ -24,10 +25,10 @@ class BackgroundRemovalDemo(BaseVideoDemo):
         self._remover = BackgroundRemover(segmentation)
         
         # Load a custom background image
-        _background_path = self.get_demo_folder() / "assets" / self.settings.demo.background_file
+        _background_path = self.get_asset_path(self.settings.demo.background_file)
         self._background = cv2.imread(_background_path)
         if self._background is None:
-            logging.error("No background image found: %s", _background_path)
+            logger.error("No background image found: %s", _background_path)
 
     def process_frame(self, frame):
         """Replaces the background of the frame."""

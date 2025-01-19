@@ -349,7 +349,7 @@ class VideoStreamManager:
     Manages video stream capture with support for strategy patterns.
     """
 
-    def __init__(self, settings, source_path="./"):
+    def __init__(self, settings, capture_source=0):
         """
         Initialize the video stream manager.
 
@@ -357,7 +357,6 @@ class VideoStreamManager:
             settings: The settings file.
         """
         self._settings = weakref.ref(settings)
-        capture_source = 0 if settings.video.capture.source == 0 else source_path / settings.video.capture.source
         self._capture = cv2.VideoCapture(capture_source)
         self._is_camera = (capture_source == 0)
         if settings.video.capture.width and settings.video.capture.height:

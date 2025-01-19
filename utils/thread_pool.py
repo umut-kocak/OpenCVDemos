@@ -8,7 +8,6 @@ import threading
 from concurrent.futures import Future, ThreadPoolExecutor
 from queue import Queue
 
-
 class ThreadPool:
     """
     A class to manage a pool of worker threads that process tasks from a queue.
@@ -78,3 +77,71 @@ class ThreadPool:
 
         # Shutdown the executor
         self.executor.shutdown(wait=wait)
+
+    def __del__(self):
+        """
+        """
+        self.shutdown()
+
+
+# Define a default global thread pool
+global_thread_pool = None # pylint: disable=C0103
+
+def get_thread_pool():
+    """
+    """
+    global global_thread_pool # pylint: disable=global-statement
+    if global_thread_pool is None:
+        global_thread_pool = ThreadPool()
+    return global_thread_pool
+ 
+# import time
+# import logging
+# from thread_pool_module import ThreadPool  # Assume your ThreadPool class is in this module
+# 
+# # Set up logging
+# logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
+# 
+# # Define a sample task
+# def sample_task(name, duration):
+#     logging.info("Task %s started, will take %d seconds.", name, duration)
+#     time.sleep(duration)
+#     logging.info("Task %s completed.", name)
+#     return f"Result from {name}"
+# 
+# # Create a ThreadPool instance
+# thread_pool = ThreadPool(max_workers=3)
+# 
+# # Submit tasks to the pool
+# futures = []
+# for i in range(5):
+#     future = thread_pool.submit_task(sample_task, f"Task-{i+1}", i+1)
+#     futures.append(future)
+# 
+# # Wait for futures and handle results
+# for future in futures:
+#     try:
+#         # Wait for the task to complete and get the result
+#         result = future.result(timeout=10)  # Timeout in seconds
+#         logging.info("Future result: %s", result)
+#     except Exception as e:
+#         logging.error("Exception while executing a task: %s", e)
+# 
+# # Shutdown the thread pool
+# thread_pool.shutdown(wait=True)
+# 
+# # Define a callback function
+# def task_callback(future):
+#     try:
+#         result = future.result()
+#         logging.info("Callback: Task completed with result: %s", result)
+#     except Exception as e:
+#         logging.error("Callback: Task failed with exception: %s", e)
+# 
+# # Submit tasks and add callbacks
+# for i in range(3):
+#     future = thread_pool.submit_task(sample_task, f"Callback-Task-{i+1}", i+1)
+#     future.add_done_callback(task_callback)
+# 
+# # Shutdown the pool after ensuring all tasks are handled
+# thread_pool.shutdown(wait=True)

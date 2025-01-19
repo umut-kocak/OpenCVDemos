@@ -29,8 +29,8 @@ def get_entry_point_filename():
 logger_name = get_entry_point_filename()
 logger_time = time.strftime("%Y%m%d-%H%M%S")
 logger_file_name = logger_name + '-' + logger_time + ".log"
-from utils.logger_initializer import initialize_logger
-initialize_logger(
+from utils.logger_initializer import initialize_global_logger
+initialize_global_logger(
     logger_name,
     logger_file_name,
     _log_to_console=True,
@@ -59,16 +59,17 @@ class BaseVideoDemo(ABC):
     Subclasses should implement specific frame processing logic and window naming.
     """
 
-    def __init__(self, settings_file=None):
+    def __init__(self):
         """Initialize the video demo with video source and settings."""
 
         # Settings
-        self.settings = Settings(["DefaultSettings.json", self.get_demo_settings_file_path(), settings_file])
+        self.settings = Settings(self.get_all_setting_files())
         if self.settings.print_ocv_info:
             print(cv2.getBuildInformation())
 
         # Handlers
-        self._video_manager = VideoStreamManager(self.settings, source_path=self.get_assets_folder())
+        source = 0 if self.settings.video.capture.source == 0 else self.get_asset_path(self.settings.video.capture.source)
+        self._video_manager = VideoStreamManager(self.settings, capture_source=source)
         self._video_manager.start()
 
         DisplayManager.create_window(self.get_window_name(),
@@ -285,7 +286,7 @@ class BaseVideoDemo(ABC):
             (ord('j'), "Decrease waiting time at the end of the frame.", lambda s: adjust_wait_time(s, -1), self.settings.frame),
             
             # Saving and settings
-            (ord('C'), "Save the current settings.", lambda s: s.save_to_json(self.get_demo_folder()/"CurrentSettings.json"), self.settings),
+            (ord('C'), "Save the current settings.", lambda s: s.save_to_json(self.get_output_folder()/"CurrentSettings.json"), self.settings),
             
             # Video capture skip number
             (ord('i'), "Increase video_capture_frame_filter_skip_number.", lambda s: adjust_skip_period(s, +1), self.settings.video.capture.frame_filtering.skip_frame),
@@ -302,9 +303,15 @@ class BaseVideoDemo(ABC):
         module_file = sys.modules[module_name].__file__
         return Path(os.path.dirname(os.path.abspath(module_file)))
 
-    def get_assets_folder(self):
-        """ Gets the folder(Path) where the demo assets reside."""
-        full_path = self.get_demo_folder() / "assets"
+    def get_asset_path(self, relative_path):
+        """ Gets the full asset path given the relative_path."""
+        full_path = self.get_demo_folder() / "assets" / relative_path
+        if full_path.exists():
+            return full_path
+        full_path = Path("./assets") / relative_path
+        if full_path.exists():
+            return full_path
+        full_path = Path(relative_path)
         if full_path.exists():
             return full_path
         return None
@@ -316,12 +323,13 @@ class BaseVideoDemo(ABC):
         Path(_output_path).mkdir(parents=True, exist_ok=True)
         return _output_path
 
-    def get_demo_settings_file_path(self):
-        """ Gets the (local) settings file within the specific demo folder."""
+    def get_all_setting_files(self):
+        """ Gets all the settings files."""
+        all_settings = ["DefaultSettings.json"]
         full_path = self.get_demo_folder() / "Settings.json"
         if full_path.exists():
-            return full_path
-        return None
+            all_settings.append(full_path)
+        return all_settings
 
     def _should_quit_frame_loop(self):
         """Determine if the frame loop should quit."""
