@@ -11,7 +11,7 @@ import torch
 from torchvision import models, transforms
 from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
-from utils.base_module import BaseVideoDemo
+from utils.base_video_demo import BaseVideoDemo
 from utils.background_remover import BackgroundRemover
 from utils.background_remover import Segmentation, SegmentationClass
 from utils.logger import logger

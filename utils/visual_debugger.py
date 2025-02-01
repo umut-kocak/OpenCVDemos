@@ -5,8 +5,11 @@ display modes, managing window states, and enabling/disabling debugging function
 is designed to aid in visual inspection during development by offering flexibility in frame display
 and cycling through debugging views.
 """
+import time
 import cv2
+import numpy as np
 
+from utils.frame_data import FrameData
 from utils.logger import logger
 
 
@@ -33,6 +36,7 @@ class VisualDebugger:
         if was_enabled:
             self.toggle()
         self._separate_mode = not self._separate_mode
+        logger.debug("Toggling visual debugger mode to %s mode", ("separate" if self._separate_mode else "override"))
         if was_enabled:
             self.toggle()
 
@@ -48,6 +52,13 @@ class VisualDebugger:
             return
         if self._separate_mode and self._is_window_closed(window_name):
             return
+        if frame is None :
+            if not (window_name in self._debugging_frames):
+                return
+            width, height = self._debugging_frames[window_name].image.shape[:2]
+            frame = np.zeros((height, width, 3), dtype=np.uint8)
+        if not isinstance(frame, FrameData):
+            frame = FrameData(frame, time.time())
         self._debugging_frames[window_name] = frame
 
     def display_debug_frames(self, main_frame):
@@ -120,7 +131,7 @@ class VisualDebugger:
         for name, frame in self._debugging_frames.items():
             if self._is_window_closed(name):
                 continue
-            cv2.imshow(name, frame)
+            cv2.imshow(name, frame.image)
             self._opened_windows.add(name)
 
     def _override_on_main(self, main_frame):

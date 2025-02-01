@@ -6,6 +6,7 @@ The thread pool supports a configurable number of workers and ensures tasks are 
 import logging
 import threading
 from concurrent.futures import Future, ThreadPoolExecutor
+import queue
 from queue import Queue
 
 class ThreadPool:
@@ -62,7 +63,7 @@ class ThreadPool:
                 future = self.task_queue.get(timeout=0.1)
                 if future.done() and future.exception():
                     logging.error("Task failed with exception: %s", future.exception())
-            except Queue.Empty:
+            except queue.Empty:
                 continue
 
     def shutdown(self, wait=True):

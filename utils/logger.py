@@ -84,15 +84,15 @@ class ThreadedLogger:
             *args: Positional arguments for the logger.
             **kwargs: Keyword arguments for the logger.
         """
-        if self.logger:
+        if self.logger :
             self.executor.submit(self.logger.log, level, msg, *args, **kwargs)
 
     def shutdown(self):
         """
         Shutdown the thread pool and wait for all logging tasks to complete.
         """
-        self.executor.shutdown(wait=True)
         self.logger = None
+        self.executor.shutdown(wait=True)
 
     def __del__(self):
         """

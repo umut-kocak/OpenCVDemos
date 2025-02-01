@@ -12,6 +12,7 @@ Usage:
 Subclass `BaseVideoDemo` and override required methods to create custom video demos.
 """
 from abc import ABC, abstractmethod
+from enum import Enum
 import os
 import logging
 from pathlib import Path
@@ -20,55 +21,40 @@ import time
 
 import cv2
 
-# Initialize the global logger before importing other modules
-def get_entry_point_filename():
-    filename_with_ext = os.path.basename(sys.argv[0])
-    filename = os.path.splitext(filename_with_ext)[0]
-    return filename
-
-logger_name = get_entry_point_filename()
-logger_time = time.strftime("%Y%m%d-%H%M%S")
-logger_file_name = logger_name + '-' + logger_time + ".log"
-from utils.logger_initializer import initialize_global_logger
-initialize_global_logger(
-    logger_name,
-    logger_file_name,
-    _log_to_console=True,
-    _log_to_file=logger_file_name,
-    _console_level=logging.DEBUG,
-    _file_level=logging.DEBUG
-)
-
-# Import modules after the global logger is initialized
-from utils.display_manager import DisplayManager  # pylint: disable=C0413
-from utils.frame_timer import FrameTimer  # pylint: disable=C0413
-from utils.key_manager import KeyManager  # pylint: disable=C0413
-from utils.logger import logger  # pylint: disable=C0413
-from utils.settings import Settings  # pylint: disable=C0413
-from utils.stats_manager import StatsManager  # pylint: disable=C0413
-from utils.text_manager import TextManager, TextProperties  # pylint: disable=C0413
-from utils.video_stream_manager import VideoStreamManager  # pylint: disable=C0413
-from utils.visual_debugger import VisualDebugger  # pylint: disable=C0413
+from utils.base_demo import BaseDemo
+from utils.display_manager import DisplayManager
+from utils.frame_timer import FrameTimer
+from utils.helper import resize_image
+from utils.logger import logger
+from utils.video_stream_manager import VideoStreamManager
+from utils.visual_debugger import VisualDebugger
 
 SEC_TO_MSEC = 1000
 
 
-class BaseVideoDemo(ABC):
+class BaseVideoDemo(BaseDemo):
     """
     Base class for video demos that handle video streaming, displaying, and key management.
     Subclasses should implement specific frame processing logic and window naming.
     """
+    class FrameStatus(Enum):
+        SUCCESS = 0
+        IGNORE = 1
+        ABORT = 2
 
     def __init__(self):
         """Initialize the video demo with video source and settings."""
 
-        # Settings
-        self.settings = Settings(self.get_all_setting_files())
-        if self.settings.print_ocv_info:
-            print(cv2.getBuildInformation())
+        super().__init__()
 
         # Handlers
-        source = 0 if self.settings.video.capture.source == 0 else self.get_asset_path(self.settings.video.capture.source)
+        source = 0
+        if self.settings.video.capture.source != 0:
+            source_file = self.get_asset_path(self.settings.video.capture.source)
+            if source_file:
+                source = source_file
+            else: 
+                logger.error("Could not find the video source %s. Using camera instead.", self.settings.video.capture.source)
         self._video_manager = VideoStreamManager(self.settings, capture_source=source)
         self._video_manager.start()
 
@@ -76,20 +62,14 @@ class BaseVideoDemo(ABC):
                                      resizable=self.settings.display.resizable,
                                      default_size=(self.settings.display.width, self.settings.display.height))
 
-        self._key_manager = KeyManager()
-        self._stats_manager = StatsManager(calculation_frequency=self.settings.stats.calculation_frequency)
-        self._text_manager = TextManager()
-        self._text_manager.register_properties(
-            "stats", TextProperties(color=TextProperties.GREEN))
-
-        self._visual_debugger = VisualDebugger()
         self._frame_timer = FrameTimer(calculation_frequency=self.settings.frame.timer.calculation_frequency)
-
-        self.register_keys()
-
         self._quit_loop = False
         self._number_of_null_frames = 0
         self._paused = False
+        
+        self._visual_debugger = VisualDebugger()
+
+        self.register_keys()
 
     @abstractmethod
     def process_frame(self, frame):
@@ -98,23 +78,24 @@ class BaseVideoDemo(ABC):
     @abstractmethod
     def get_window_name(self):
         """Return the name of the window."""
+        return "Base Video Demo"
 
     def pre_frame_loop(self):
         """Hook for operations to run before the frame loop starts."""
 
-    def resize_to_process_frame(self, frame):
-        """.Resizes the frame from video to the desired size for the processing."""
-        frame.image = cv2.resize(frame.image,
-            (self.settings.frame.processing.width, self.settings.frame.processing.height),
-            interpolation=cv2.INTER_LINEAR)
-        return frame
-
-    def resize_from_process_frame(self, frame):
-        """Resizes the output of the processing back to the original video frame size."""
-        frame.image = cv2.resize(frame.image,
-            (self._video_manager.width, self._video_manager.height),
-            interpolation=cv2.INTER_LINEAR)
-        return frame
+    def check_captured_frame(self, frame):
+        """Hook for operations to run when there are not enough captured video frames."""
+        if frame is None:
+            # Check if the number of consequent None frames is within the
+            # tolerated limits
+            self._number_of_null_frames += 1
+            self._frame_timer.undo_start_frame()
+            nr_tolerate = self.settings.frame.missing_to_tolerate
+            if nr_tolerate > 0 and self._number_of_null_frames > nr_tolerate:
+                return self.FrameStatus.ABORT
+            return self.FrameStatus.IGNORE
+        self._number_of_null_frames = 0
+        return self.FrameStatus.SUCCESS
 
     def frame_loop_begin(self):
         """Capture and return a frame. Can be overridden by subclasses."""
@@ -180,20 +161,22 @@ class BaseVideoDemo(ABC):
 
     def cleanup(self):
         """Perform cleanup tasks when the demo is stopped."""
-        logger.debug("BaseModule::cleanup")
+        logger.debug("BaseVideoDemo::cleanup")
+        super(BaseVideoDemo, self).cleanup()
         self._video_manager.release()
         DisplayManager.destroy_all_windows()
-        self._stats_manager.cleanup()
-        self._visual_debugger.cleanup()
 
-    def toggle_pause(self):
+    def toggle_pause(self, explicit_set=False, explicit_value=True):
         """Toggle pause."""
-        logger.debug("%sPausing.",("Un" if self._paused else ""))
+        if explicit_set:
+            self._paused = explicit_value
+        else: 
+            self._paused = not self._paused
+        logger.debug("%sPausing.",("" if self._paused else "Un"))
         if self._paused:
-            self._video_manager.start()
-        else:
             self._video_manager.stop()
-        self._paused = not self._paused
+        else:
+            self._video_manager.start()
 
     def run(self):
         """Run the main loop for video processing."""
@@ -210,31 +193,28 @@ class BaseVideoDemo(ABC):
             # Beginning of the frame
             self._frame_timer.start_frame()
             frame = self.frame_loop_begin()
-            if frame is None:
-                # Check if the number of consequent None frames is within the
-                # tolerated limits
-                self._number_of_null_frames += 1
-                self._frame_timer.undo_start_frame()
-                nr_tolerate = self.settings.frame.missing_to_tolerate
-                if nr_tolerate > 0 and self._number_of_null_frames > nr_tolerate:
-                    # Too many None frames, Quit the main loop
+            frame_status = self.check_captured_frame(frame)
+            if frame_status:
+                if frame_status == self.FrameStatus.ABORT:
                     logger.warning("Too many None frames, Quitting the main loop.")
                     break
-                continue
+                elif frame_status == self.FrameStatus.IGNORE :
+                    continue
 
             # Processing the frame
             self._frame_timer.begin_label("PocessT(ms)")
             if self.settings.frame.processing.resize_capture_before_process:
-                frame = self.resize_to_process_frame(frame)
+                frame.image = resize_image(frame.image, self.settings.frame.processing.width, self.settings.frame.processing.height)
             frame = self.process_frame(frame)
             if self.settings.frame.processing.resize_capture_before_process:
-                frame = self.resize_from_process_frame(frame)
+                frame.image = resize_image(frame.image, self._video_manager.width, self._video_manager.height)
             self._frame_timer.end_label("PocessT(ms)")
+            
+            frame = self._visual_debugger.display_debug_frames(frame)
 
             # End of the frame
             self.frame_loop_end(frame)
             self._frame_timer.end_frame()
-            self._number_of_null_frames = 0
             if self._should_quit_frame_loop():
                 break
 
@@ -296,40 +276,6 @@ class BaseVideoDemo(ABC):
         # Register all key bindings
         for key, description, callback, callback_arg, *args in key_bindings:
             self._key_manager.register_key(key, description, callback, callback_arg, *args)
-
-    def get_demo_folder(self):
-        """ Gets the folder(Path) where the demo resides."""
-        module_name = self.__class__.__module__
-        module_file = sys.modules[module_name].__file__
-        return Path(os.path.dirname(os.path.abspath(module_file)))
-
-    def get_asset_path(self, relative_path):
-        """ Gets the full asset path given the relative_path."""
-        full_path = self.get_demo_folder() / "assets" / relative_path
-        if full_path.exists():
-            return full_path
-        full_path = Path("./assets") / relative_path
-        if full_path.exists():
-            return full_path
-        full_path = Path(relative_path)
-        if full_path.exists():
-            return full_path
-        return None
-
-    def get_output_folder(self):
-        """ Gets the folder(Path) where the demo should save outputs."""
-        global logger_time
-        _output_path = self.get_demo_folder() / ("output-" + logger_time )
-        Path(_output_path).mkdir(parents=True, exist_ok=True)
-        return _output_path
-
-    def get_all_setting_files(self):
-        """ Gets all the settings files."""
-        all_settings = ["DefaultSettings.json"]
-        full_path = self.get_demo_folder() / "Settings.json"
-        if full_path.exists():
-            all_settings.append(full_path)
-        return all_settings
 
     def _should_quit_frame_loop(self):
         """Determine if the frame loop should quit."""

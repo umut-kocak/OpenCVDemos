@@ -7,7 +7,7 @@ video output.
 """
 import cv2
 
-from utils.base_module import BaseVideoDemo
+from utils.base_video_demo import BaseVideoDemo
 from utils.class_factory import ClassFactory
 from utils.face_detector import FaceDetector, HaarCascadeFaceDetection, OCVDnnFaceDetection
 from utils.logger import logger
@@ -50,14 +50,14 @@ class FaceDetectionDemo(BaseVideoDemo):
         """
         super(FaceDetectionDemo, self).register_keys()
 
-        def adjust_detection_strategy(demo, delta):
-            demo._current_strategy = (demo._current_strategy + delta) % self._number_of_strategies
-            logger.info("Changing detection to strategy %s ", demo._strategy_factory.get_class(demo._current_strategy))
-            demo._face_detector.set_strategy(demo._strategy_factory.create_class(demo._current_strategy))
+        def adjust_detection_strategy(delta):
+            self._current_strategy = (self._current_strategy + delta) % self._number_of_strategies
+            logger.info("Changing detection to strategy %s ", self._strategy_factory.get_class(self._current_strategy))
+            self._face_detector.set_strategy(self._strategy_factory.create_class(self._current_strategy))
 
         key_bindings = [
             # General keys
-            (ord('m'), "Change the detection strategy ", lambda m: adjust_detection_strategy(m, +1), self)
+            (ord('m'), "Change the detection strategy ", lambda delta: adjust_detection_strategy(delta), 1)
         ]
     
         # Register all key bindings
@@ -67,27 +67,6 @@ class FaceDetectionDemo(BaseVideoDemo):
     def get_window_name(self):
         """Return the name of the demo window."""
         return "Face Detection Demo"
-
-    def _create_strategy(self, strategy_key, **kwargs):
-        """
-        Retrieve and instantiate a face detection strategy based on the given key.
-    
-        Args:
-            strategy_key (int): The key corresponding to the desired strategy.
-            kwargs: Additional arguments required by specific strategies.
-    
-        Returns:
-            FaceDetectionStrategy: An instantiated strategy object.
-    
-        Raises:
-            ValueError: If the strategy_key is not valid.
-        """
-        strategy_class = self._strategies.get(strategy_key)
-        if strategy_class is None:
-            raise ValueError(f"Invalid strategy key: {strategy_key}. Available keys: {list(self._strategies.keys())}")
-        
-        return strategy_class(**kwargs)
-
 
 if __name__ == "__main__":
     demo = FaceDetectionDemo()

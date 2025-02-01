@@ -9,7 +9,7 @@ Press 'm' during the demo to change the stylization mode.
 """
 import cv2
 
-from utils.base_module import BaseVideoDemo
+from utils.base_video_demo import BaseVideoDemo
 from utils.face_detector import FaceDetector
 
 
@@ -70,9 +70,9 @@ class CartoonizeDemo(BaseVideoDemo):
         """
         super(CartoonizeDemo, self).register_keys()
 
-        def adjust_processing_mode(demo, delta):
-            new_mode = max(1, getattr(demo, '_processing_mode') + delta)
-            setattr(demo, '_processing_mode', new_mode % self._nr_of_modes)
+        def adjust_processing_mode(delta):
+            new_mode = max(1, getattr(self, '_processing_mode') + delta)
+            setattr(self, '_processing_mode', new_mode % self._nr_of_modes)
     
         def adjust_sigma_s(settings, delta):
             key = 'sigma_s'+str(self._processing_mode % self._nr_of_modes)
@@ -86,7 +86,7 @@ class CartoonizeDemo(BaseVideoDemo):
         
         key_bindings = [
             # General keys
-            (ord('m'), "Change the processing mode", lambda m: adjust_processing_mode(m, +1), self),
+            (ord('m'), "Change the processing mode", lambda delta: adjust_processing_mode(delta), 1),
 
             # Sigma settings
             (ord('o'), "Increase current sigma_s.", lambda s: adjust_sigma_s(s, +1), self.settings.demo),
