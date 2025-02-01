@@ -1,0 +1,35 @@
+{
+    "Settings": {
+        "demo": {
+            "extracted_input_folder": "",
+            "record_period": 1.0,
+			"extraction": {
+				"save": true,
+				"keep_in_memory": false
+			},
+			"calibration" : {
+				"chessboard_size" : [8,6],
+				"square_size" : 25,
+				"projection_error_threshold" : 0.5,
+				"matrix" : null,
+				"dist" : null,
+				"print_results" : true
+			}
+        },
+        "video": {
+            "capture": {
+				"source": "chessboard_video.avi",
+                "threading": "SINGLE"
+            }
+        },
+        "frame": {
+            "processing": {
+                "resize_capture_before_process": false
+            }
+        },
+        "stats": {
+            "show_help": true,
+            "show_stats": true
+        }
+    }
+}

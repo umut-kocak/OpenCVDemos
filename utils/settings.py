@@ -5,14 +5,14 @@ current settings back to a JSON file. The configuration is organized under a sec
 the class for better modularity and reusability.
 """
 import json
+import numpy as np
 from utils.logger import logger
-
 
 class SubSection:
     """
     Represents a subsection of settings. Supports recursive merging of settings.
     """
-
+    
     def __init__(self, initial_data=None):
         """
         Initialize the SubSection with optional initial data.
@@ -41,7 +41,10 @@ class SubSection:
         """
         result = {}
         for key, value in self._data.items():
-            result[key] = value.to_dict() if isinstance(value, SubSection) else value
+            if isinstance(value, np.ndarray):
+                result[key] = value.tolist()
+            else:
+                result[key] = value.to_dict() if isinstance(value, SubSection) else value
         return result
 
     def __getattr__(self, key):
@@ -62,7 +65,6 @@ class SubSection:
     def __repr__(self):
         return repr(self._data)
 
-
 class Settings:
     """
     A class for managing application settings with support for subsections and recursive merging.
@@ -72,7 +74,6 @@ class Settings:
         """
         Initializes the Settings class with default values.
         """
-        # Load settings from JSON files if provided
         if setting_files:
             for setting_file in setting_files:
                 if setting_file:
@@ -93,7 +94,6 @@ class Settings:
                 self._merge_settings(self, section)
             else:
                 logger.warning("No settings found for '%s' in the file.", class_name)
-
         except FileNotFoundError:
             logger.warning("Setting file '%s' not found. Using default values.", setting_file)
         except json.JSONDecodeError as e:
@@ -108,7 +108,7 @@ class Settings:
         try:
             class_name = self.__class__.__name__
             settings_to_save = {class_name: self._to_dict(self)}
-
+            
             with open(setting_file, 'w', encoding='utf-8') as f:
                 json.dump(settings_to_save, f, indent=4)
             logger.info("Settings saved to '%s' successfully.", setting_file)
@@ -140,88 +140,10 @@ class Settings:
         """
         result = {}
         for key, value in vars(obj).items():
-            if isinstance(value, SubSection):
+            if isinstance(value, np.ndarray):
+                result[key] = value.tolist()
+            elif isinstance(value, SubSection):
                 result[key] = value.to_dict()
             else:
                 result[key] = value
         return result
-
-class SettingsOLD:
-    """
-    Initializes the Settings class with default values. Optionally loads settings
-    from a JSON file if provided.
-
-    Args:
-        setting_files (array of str, optional): Path to a JSON files containing setting
-                                      parameters. If not provided, default values are used.
-    """
-
-    def __init__(self, setting_files: str = None):
-
-        self.video_source = 0
-        self.input_width = None
-        self.input_height = None
-        self.window_width = 640
-        self.window_height = 480
-        self.resizable_window = True
-
-
-        # Load settings from JSON file if provided
-        if setting_files:
-            for setting_file in setting_files:
-                if setting_file:
-                    self.load_from_json(setting_file)
-
-    def load_from_json(self, setting_file: str):
-        """
-        Loads setting parameters from a JSON file, overwriting default values.
-
-        Args:
-            setting_file (str): Path to the JSON file containing setting parameters.
-
-        Raises:
-            FileNotFoundError: If the specified JSON file is not found.
-            json.JSONDecodeError: If the JSON file is not valid.
-        """
-        try:
-            with open(setting_file, 'r', encoding='utf-8') as f:
-                setting_data = json.load(f)
-
-            # Find the section that matches the class name and loop within it
-            class_name = self.__class__.__name__
-            if class_name in setting_data:
-                section = setting_data[class_name]
-
-                # Set attributes dynamically based on the settings found in the
-                # section
-                for key, value in section.items():
-                    setattr(self, key, value)
-            else:
-                logger.warning("No settings found for '%s' in the file.", class_name)
-
-        except FileNotFoundError:
-            logger.warning("Setting file '%s' not found. Using default values.", setting_file)
-        except json.JSONDecodeError as e:
-            logger.error("Setting file '%s' is not a valid JSON. Using default values.", setting_file)
-            logger.error("%s at line %d, column %d", e.msg, e.lineno, e.colno)
-
-    def save_to_json(self, setting_file: str):
-        """
-        Saves the current settings to a JSON file, storing them under a section named
-        the same as the class name.
-
-        Args:
-            setting_file (str): Path to the JSON file where the settings should be saved.
-        """
-        try:
-            # Get the class name for the section
-            class_name = self.__class__.__name__
-
-            # Prepare the data to be saved under the class name section
-            settings_to_save = {class_name: self.__dict__}
-
-            with open(setting_file, 'w', encoding='utf-8') as f:
-                json.dump(settings_to_save, f, indent=4)
-            logger.info("Settings saved to '%s' successfully.", setting_file)
-        except IOError as e:
-            logger.error("Unable to save settings to '%s'. %s", setting_file, e)

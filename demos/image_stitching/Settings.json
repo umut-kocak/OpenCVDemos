@@ -1,0 +1,30 @@
+{
+    "Settings": {
+        "demo": {
+            "extracted_input_folder": "",
+            "record_period": 1.0,
+			"stitcher": {
+				"type" : "OPENCVBUILTIN"
+			},
+			"extraction": {
+				"save": true,
+				"keep_in_memory": false
+			}
+        },
+        "video": {
+            "capture": {
+				"source": "panaroma_video.mp4",
+                "threading": "SINGLE"
+            }
+        },
+        "frame": {
+            "processing": {
+                "resize_capture_before_process": false
+            }
+        },
+        "stats": {
+            "show_help": true,
+            "show_stats": true
+        }
+    }
+}

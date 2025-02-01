@@ -3,12 +3,12 @@ import cv2
 from utils.logger import logger
 
 class VideoWriter:
-    def __init__(self, filename, fourcc='XVID', fps=30, frame_size=(640, 480)):
+    def __init__(self, filename, fourcc='MJPG', fps=30, frame_size=(640, 480)):
         """
         Initializes the VideoWriter.
         
         :param filename: Output video file name.
-        :param fourcc: FourCC codec code (default: 'XVID').
+        :param fourcc: FourCC codec code (default: 'MJPG').
         :param fps: Frames per second (default: 30).
         :param frame_size: Frame size (default: (640, 480)).
         """
@@ -18,6 +18,13 @@ class VideoWriter:
         self.frame_size = frame_size
         self.fourcc = cv2.VideoWriter_fourcc(*fourcc)
         self.out = cv2.VideoWriter(self.filename, self.fourcc, self.fps, self.frame_size)
+        print(filename)
+        print(frame_size)
+        print(fps)
+
+        if not self.out.isOpened():
+            logger.error("Failed to open VideoWriter with filename: %s", self.filename)
+            exit(1)
     
     def write(self, frame):
         """
@@ -37,16 +44,22 @@ class VideoWriter:
         if self.out.isOpened():
             self.out.release()
             logger.info("Video saved to %s.", self.filename)
+            logger.debug("VideoWriter is already released")
         else:
-            logger.error("VideoWriter is not opened.")
+            logger.debug("VideoWriter is already released.")
 
 # Example usage:
 if __name__ == "__main__":
     # Set up video capture from webcam
     cap = cv2.VideoCapture(0)
     
+    # Check if the webcam is opened successfully
+    if not cap.isOpened():
+        logger.error("Failed to open the webcam.")
+        exit(1)
+    
     # Create VideoWriter instance
-    video_writer = VideoWriter('output_video.avi', fps=30, frame_size=(640, 480))
+    video_writer = VideoWriter('output_video.avi', fourcc='MJPG', fps=30, frame_size=(640, 480))
     
     while True:
         ret, frame = cap.read()
@@ -57,7 +70,7 @@ if __name__ == "__main__":
         frame_resized = cv2.resize(frame, (640, 480))
         
         # Write the frame to the video file
-        video_writer.write_frame(frame_resized)
+        video_writer.write(frame_resized)
         
         # Display the frame
         cv2.imshow('Webcam', frame_resized)

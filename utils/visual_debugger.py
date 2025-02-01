@@ -53,10 +53,10 @@ class VisualDebugger:
         if self._separate_mode and self._is_window_closed(window_name):
             return
         if frame is None :
-            if not (window_name in self._debugging_frames):
-                return
-            width, height = self._debugging_frames[window_name].image.shape[:2]
-            frame = np.zeros((height, width, 3), dtype=np.uint8)
+            if window_name in self._debugging_frames:
+                del self._debugging_frames[window_name]
+                cv2.destroyWindow(window_name)
+            return
         if not isinstance(frame, FrameData):
             frame = FrameData(frame, time.time())
         self._debugging_frames[window_name] = frame
@@ -175,7 +175,8 @@ class VisualDebugger:
         if is_closed:
             logger.debug("Closing the window: %s", window_name)
             self._opened_windows.remove(window_name)
-            del self._debugging_frames[window_name]
+            if window_name in self._debugging_frames:
+                del self._debugging_frames[window_name]
             self._closed_windows.add(window_name)
             if len(self._opened_windows) == 0:
                 logger.debug("No windows open, toggling off.")

@@ -1,0 +1,22 @@
+{
+    "Settings": {
+        "demo": {
+			"output": {
+				"file_name": "output_video.avi",
+				"fourcc": "MJPG"
+			}
+        },
+        "video": {
+            "capture": {
+                "threading": "SINGLE"
+            }
+        },
+        "frame": {
+            "missing_to_tolerate": -200
+        },
+        "stats": {
+            "show_help": true,
+            "show_stats": false
+        }
+    }
+}
