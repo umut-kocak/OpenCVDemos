@@ -74,14 +74,14 @@ class MediaPipeHandDetection(HandDetectionStrategy):
         mp_hands = mp.solutions.hands
         mp_drawing = mp.solutions.drawing_utils
         mp_drawing_styles = mp.solutions.drawing_styles
-        
+
         with mp_hands.Hands(static_image_mode=False, max_num_hands=2, min_detection_confidence=0.7) as hands:
             # Convert the BGR image to RGB for MediaPipe
             rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        
+
             # Process the image to detect hands
             results = hands.process(rgb_image)
-        
+
             # Annotate the image if hands are detected
             if results.multi_hand_landmarks:
                 for hand_landmarks in results.multi_hand_landmarks:
@@ -93,7 +93,7 @@ class MediaPipeHandDetection(HandDetectionStrategy):
                         mp_drawing_styles.get_default_hand_landmarks_style(),
                         mp_drawing_styles.get_default_hand_connections_style(),
                     )
-        
+
                     # Convert normalized landmark coordinates to pixel values
                     height, width, _ = image.shape
                     landmarks = [
@@ -102,7 +102,7 @@ class MediaPipeHandDetection(HandDetectionStrategy):
                         )
                         for landmark in hand_landmarks.landmark
                     ]
-        
+
                     if landmarks and None not in landmarks:
                         # Recognize the gesture
                         gesture = self._recognize_hand_gesture(hand_landmarks.landmark)
@@ -133,17 +133,17 @@ class MediaPipeHandDetection(HandDetectionStrategy):
         middle_tip = landmarks[12]
         ring_tip = landmarks[16]
         pinky_tip = landmarks[20]
-    
+
         thumb_mcp = landmarks[2]
         wrist = landmarks[0]
-    
+
         # Calculate distances or relative positions
         thumb_open = thumb_tip.x > thumb_mcp.x if thumb_mcp.x < wrist.x else thumb_tip.x < thumb_mcp.x
         index_open = index_tip.y < landmarks[6].y  # Index finger is raised
         middle_open = middle_tip.y < landmarks[10].y
         ring_open = ring_tip.y < landmarks[14].y
         pinky_open = pinky_tip.y < landmarks[18].y
-    
+
         # Determine gesture based on which fingers are open
         if all([thumb_open, index_open, middle_open, ring_open, pinky_open]):
             return "Open Hand"
@@ -155,8 +155,8 @@ class MediaPipeHandDetection(HandDetectionStrategy):
             return "Thumbs Up"
         elif not any([thumb_open, index_open, middle_open, ring_open, pinky_open]):
             return "Fist"
-    
-        return "Unknown Gesture"        
+
+        return "Unknown Gesture"
 
 
 class ContourBasedHandDetection(HandDetectionStrategy):
@@ -178,30 +178,30 @@ class ContourBasedHandDetection(HandDetectionStrategy):
         lower_skin = np.array([0, 20, 70], dtype=np.uint8)
         upper_skin = np.array([20, 255, 255], dtype=np.uint8)
         mask = cv2.inRange(hsv, lower_skin, upper_skin)
-        
+
         # Apply morphological operations to reduce noise
         kernel = np.ones((5, 5), np.uint8)
         mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
         mask = cv2.dilate(mask, kernel, iterations=2)
-        
+
         # Find contours
         contours, _ = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         if len(contours) == 0:
             return image  # Return the original image if no hand is detected
-    
+
         # Find the largest contour (assuming it's the hand)
         largest_contour = max(contours, key=cv2.contourArea)
         if cv2.contourArea(largest_contour) < 2000:  # Ignore small contours
             return image
-    
+
         # Draw the contour
         cv2.drawContours(image, [largest_contour], -1, (0, 255, 0), 2)
-    
+
         # Convex hull
         hull = cv2.convexHull(largest_contour, returnPoints=False)
         hull_points = cv2.convexHull(largest_contour)
         cv2.drawContours(image, [hull_points], -1, (255, 0, 0), 2)
-    
+
         # Find convexity defects
         defects = cv2.convexityDefects(largest_contour, hull)
         if defects is not None:
@@ -211,23 +211,23 @@ class ContourBasedHandDetection(HandDetectionStrategy):
                 start = tuple(largest_contour[start_idx][0])
                 end = tuple(largest_contour[end_idx][0])
                 far = tuple(largest_contour[far_idx][0])
-    
+
                 # Calculate the angle between the fingers
                 a = math.dist(start, end)
                 b = math.dist(start, far)
                 c = math.dist(end, far)
                 angle = math.acos((b ** 2 + c ** 2 - a ** 2) / (2 * b * c))
-    
+
                 # If the angle is less than 90 degrees, it is considered a finger
                 if angle <= math.pi / 2:
                     count_fingers += 1
                     cv2.circle(image, far, 8, (0, 0, 255), -1)
-    
+
                 # Draw lines for the defect points
                 cv2.line(image, start, end, (0, 255, 255), 2)
                 cv2.circle(image, start, 8, (255, 255, 0), -1)
                 cv2.circle(image, end, 8, (255, 255, 0), -1)
-    
+
             # Gesture recognition
             gesture = ""
             if count_fingers == 0:
@@ -242,10 +242,10 @@ class ContourBasedHandDetection(HandDetectionStrategy):
                 gesture = "Four"
             elif count_fingers == 5:
                 gesture = "Five"
-    
+
             # Display the gesture
             cv2.putText(image, f"Gesture: {gesture}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
-    
+
         return image
 
 

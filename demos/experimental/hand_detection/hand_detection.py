@@ -43,7 +43,7 @@ class HandDetectionDemo(BaseVideoDemo):
             # General keys
             (ord('m'), "Change the detection strategy ", lambda m: adjust_detection_strategy(m, +1), self)
         ]
-    
+
         # Register all key bindings
         for key, description, callback, callback_arg, *args in key_bindings:
             self._key_manager.register_key(key, description, callback, callback_arg, *args, name_space=self.get_window_name())
@@ -69,7 +69,7 @@ class HandDetectionDemo(BaseVideoDemo):
         strategy_class = self._strategies.get(strategy_key)
         if strategy_class is None:
             raise ValueError(f"Invalid strategy key: {strategy_key}. Available keys: {list(self._strategies.keys())}")
-        
+
         return strategy_class(**kwargs)
 
 

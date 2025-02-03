@@ -1,6 +1,9 @@
+"""
+A factory class to create and retrieve classes based on a provided catalog of strategies.
+"""
 from utils.logger import logger
 
-class ClassFactory(object):
+class ClassFactory():
     """
     A factory class to create and retrieve classes based on a provided catalog of strategies.
 
@@ -74,39 +77,7 @@ class ClassFactory(object):
         if kwargs is not None and len(kwargs) > 0:
             logger.debug("Creating class '%s' with given parameters: %s", strategy_key, kwargs)
             return strategy_class(**kwargs)
-        else:
-            logger.debug("Creating class '%s' with default parameters: %s", strategy_key, default_arguments)
-            return strategy_class(**default_arguments)
 
-from utils.logger import logger
-
-
-class ClassFactoryOls(object):
-    """
-    """
-
-    def __init__(self, class_catalog):
-        super().__init__()
-        self._catalog = class_catalog
-
-    def get_class(self, strategy_key):
-        """
-        """
-        strategy_class, default_arguments = self._catalog.get(strategy_key)
-        if strategy_class is None:
-            raise ValueError(f"Invalid strategy key: {strategy_key}. Available keys: {list(self._catalog.keys())}")
-        return strategy_class
-
-    def create_class(self, strategy_key, **kwargs):
-        """
-        """
-        strategy_class, default_arguments = self._catalog.get(strategy_key)
-        if strategy_class is None:
-            raise ValueError(f"Invalid strategy key: {strategy_key}. Available keys: {list(self._catalog.keys())}")
-
-        if kwargs is not None and len(kwargs) > 0:
-            logger.debug("Creating class with given parameters %s ", kwargs)
-            return strategy_class(**kwargs)
-        else:
-            logger.debug("Creating class with default parameters %s ", default_arguments)
-            return strategy_class(**default_arguments)
+        # Fallback to default parameters
+        logger.debug("Creating class '%s' with default parameters: %s", strategy_key, default_arguments)
+        return strategy_class(**default_arguments)

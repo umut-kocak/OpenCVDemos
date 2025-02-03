@@ -6,10 +6,6 @@ The demo initializes a logger for tracking runtime events and provides a user in
 the processed video output.
 """
 import cv2
-import numpy as np
-import torch
-from torchvision import models, transforms
-from torchvision.models.segmentation import DeepLabV3_ResNet101_Weights
 
 from utils.base_video_demo import BaseVideoDemo
 from utils.background_remover import BackgroundRemover
@@ -23,7 +19,7 @@ class BackgroundRemovalDemo(BaseVideoDemo):
         super().__init__()
         segmentation = Segmentation()
         self._remover = BackgroundRemover(segmentation)
-        
+
         # Load a custom background image
         _background_path = self.get_asset_path(self.settings.demo.background_file)
         self._background = cv2.imread(_background_path)

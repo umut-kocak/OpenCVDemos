@@ -26,7 +26,7 @@ class StyleTransferDemo(BaseVideoDemo):
             self._output_index = 0
 
         v_settings = self.settings.video.output
-        self._video_writer = VideoWriter(self.get_output_folder() / v_settings.file_name, fourcc='mp4v', 
+        self._video_writer = VideoWriter(self.get_output_folder() / v_settings.file_name, fourcc='mp4v',
             fps=self._video_manager.fps, frame_size=(self._video_manager.width, self._video_manager.height))
 
     def process_frame(self, frame):

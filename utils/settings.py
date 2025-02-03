@@ -12,7 +12,7 @@ class SubSection:
     """
     Represents a subsection of settings. Supports recursive merging of settings.
     """
-    
+
     def __init__(self, initial_data=None):
         """
         Initialize the SubSection with optional initial data.
@@ -108,7 +108,7 @@ class Settings:
         try:
             class_name = self.__class__.__name__
             settings_to_save = {class_name: self._to_dict(self)}
-            
+
             with open(setting_file, 'w', encoding='utf-8') as f:
                 json.dump(settings_to_save, f, indent=4)
             logger.info("Settings saved to '%s' successfully.", setting_file)

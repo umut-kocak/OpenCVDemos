@@ -13,6 +13,7 @@ import cv2
 
 # Initialize the global logger before importing other modules
 def get_entry_point_filename():
+    """ Returns the filename that the python interpreter is run."""
     filename_with_ext = os.path.basename(sys.argv[0])
     filename = os.path.splitext(filename_with_ext)[0]
     return filename
@@ -20,7 +21,7 @@ def get_entry_point_filename():
 logger_name = get_entry_point_filename()
 logger_time = time.strftime("%Y%m%d-%H%M%S")
 logger_file_name = logger_name + '-' + logger_time + ".log"
-from utils.logger_initializer import initialize_global_logger
+from utils.logger_initializer import initialize_global_logger   # pylint: disable=C0413
 initialize_global_logger(
     logger_name,
     logger_file_name,
@@ -42,11 +43,10 @@ SEC_TO_MSEC = 1000
 
 
 class BaseDemo(ABC):
-    """
+    """ Base class for all the demos.
     """
 
     def __init__(self):
-        """"""
 
         # Settings
         self.settings = Settings(self.get_all_setting_files())
@@ -98,7 +98,6 @@ class BaseDemo(ABC):
 
     def get_output_folder(self):
         """ Gets the folder(Path) where the demo should save outputs."""
-        global logger_time
         _output_path = self.get_demo_folder() / ("output-" + logger_time )
         Path(_output_path).mkdir(parents=True, exist_ok=True)
         return _output_path
@@ -110,4 +109,3 @@ class BaseDemo(ABC):
         if full_path.exists():
             all_settings.append(full_path)
         return all_settings
-

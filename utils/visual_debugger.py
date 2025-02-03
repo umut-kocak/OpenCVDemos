@@ -7,7 +7,6 @@ and cycling through debugging views.
 """
 import time
 import cv2
-import numpy as np
 
 from utils.frame_data import FrameData
 from utils.logger import logger

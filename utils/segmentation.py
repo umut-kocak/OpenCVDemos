@@ -3,7 +3,6 @@ This script provides a `Segmentation` class that uses a pre-trained DeepLabV3 mo
 for semantic segmentation. It supports GPU acceleration if available.
 """
 from enum import Enum
-import cv2
 import numpy as np
 import torch
 from torchvision import models, transforms

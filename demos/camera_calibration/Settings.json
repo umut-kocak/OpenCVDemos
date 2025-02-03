@@ -9,7 +9,7 @@
 			},
 			"calibration" : {
 				"chessboard_size" : [8,6],
-				"square_size" : 25,
+				"square_size" : 8,
 				"projection_error_threshold" : 0.5,
 				"matrix" : null,
 				"dist" : null,

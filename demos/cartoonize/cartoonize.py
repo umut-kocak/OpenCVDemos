@@ -10,7 +10,6 @@ Press 'm' during the demo to change the stylization mode.
 import cv2
 
 from utils.base_video_demo import BaseVideoDemo
-from utils.face_detector import FaceDetector
 
 
 class CartoonizeDemo(BaseVideoDemo):
@@ -48,15 +47,20 @@ class CartoonizeDemo(BaseVideoDemo):
         current_sigma_r = getattr(self.settings.demo, 'sigma_r'+str(mode))
         match mode:
             case 0:
-                frame.image = cv2.edgePreservingFilter(frame.image, flags=1, sigma_s=current_sigma_s, sigma_r=current_sigma_r)
+                frame.image = cv2.edgePreservingFilter(frame.image,
+                    flags=1, sigma_s=current_sigma_s, sigma_r=current_sigma_r)
             case 1:
-                frame.image = cv2.detailEnhance(frame.image, sigma_s=current_sigma_s, sigma_r=current_sigma_r)
+                frame.image = cv2.detailEnhance(frame.image,
+                    sigma_s=current_sigma_s, sigma_r=current_sigma_r)
             case 2:
-                frame.image, _ = cv2.pencilSketch(frame.image, sigma_s=current_sigma_s, sigma_r=current_sigma_r, shade_factor=0.05)
+                frame.image, _ = cv2.pencilSketch(frame.image,
+                    sigma_s=current_sigma_s, sigma_r=current_sigma_r, shade_factor=0.05)
             case 3:
-                _, frame.image = cv2.pencilSketch(frame.image, sigma_s=current_sigma_s, sigma_r=current_sigma_r, shade_factor=0.05)
+                _, frame.image = cv2.pencilSketch(frame.image,
+                    sigma_s=current_sigma_s, sigma_r=current_sigma_r, shade_factor=0.05)
             case 4:
-                frame.image = cv2.stylization(frame.image, sigma_s=current_sigma_s, sigma_r=current_sigma_r)
+                frame.image = cv2.stylization(frame.image,
+                    sigma_s=current_sigma_s, sigma_r=current_sigma_r)
             case _:  # Fallback case
                 frame.image = cv2.edgePreservingFilter(frame.image, flags=1, sigma_s=60, sigma_r=0.4)
 
@@ -68,12 +72,12 @@ class CartoonizeDemo(BaseVideoDemo):
 
         - Press 'm' to cycle through the available stylization modes.
         """
-        super(CartoonizeDemo, self).register_keys()
+        super().register_keys()
 
         def adjust_processing_mode(delta):
             new_mode = max(1, getattr(self, '_processing_mode') + delta)
             setattr(self, '_processing_mode', new_mode % self._nr_of_modes)
-    
+
         def adjust_sigma_s(settings, delta):
             key = 'sigma_s'+str(self._processing_mode % self._nr_of_modes)
             new_sigma = max(1, getattr(self.settings.demo, key) + delta)
@@ -83,7 +87,7 @@ class CartoonizeDemo(BaseVideoDemo):
             key = 'sigma_r'+str(self._processing_mode % self._nr_of_modes)
             new_sigma = max(0.01, getattr(self.settings.demo, key) + delta)
             setattr(settings, key, new_sigma)
-        
+
         key_bindings = [
             # General keys
             (ord('m'), "Change the processing mode", lambda delta: adjust_processing_mode(delta), 1),
@@ -95,10 +99,11 @@ class CartoonizeDemo(BaseVideoDemo):
             (ord(';'), "Decrease current sigma_r.", lambda s: adjust_sigma_r(s, -0.1), self.settings.demo),
 
         ]
-    
+
         # Register all key bindings
         for key, description, callback, callback_arg, *args in key_bindings:
-            self._key_manager.register_key(key, description, callback, callback_arg, *args, name_space=self.get_window_name())
+            self._key_manager.register_key(key, description, callback, callback_arg, *args,
+                name_space=self.get_window_name())
 
     def get_window_name(self):
         """

@@ -16,17 +16,20 @@ from utils.frame_data import FrameData
 from utils.logger import logger
 
 class FrameFilteringMethod(Enum):
+    """ An enum representing different methods for choosing captured frames. """
     NONE = 1
     SKIP_FRAME = 2
     ADAPT_QUEUE_SIZE = 3
 
     def next(self):
+        """ Returns the next enum value. """
         members = list(type(self))
         next_index = (members.index(self) + 1) % len(members)
         return members[next_index]
 
     @classmethod
     def get_from_string(cls, name):
+        """ Converts a string to the enum. """
         try:
             # Access the enum member by name
             return cls.__members__[name.upper()]
@@ -39,16 +42,17 @@ class VideoCaptureStrategy:
     Abstract base class for video capture strategies.
     """
 
-    def __init__(self, owner):
+    def __init__(self, manager):
         """
         Initialize the strategy.
 
         Args:
-            owner (VideoStreamManager): The owner.
+            _owner (VideoStreamManager): The _owner.
         """
-        self._owner = weakref.ref(owner)
+        self._owner = weakref.ref(manager)
         self.frame_filtering = FrameFilteringMethod.NONE
-        self.set_frame_filtering_method( FrameFilteringMethod.get_from_string(self._owner()._settings().video.capture.frame_filtering.method) )
+        self.set_frame_filtering_method(
+          FrameFilteringMethod.get_from_string(self._owner()._settings().video.capture.frame_filtering.method) )
 
         self._index_skipped_frames = 0
 
@@ -150,12 +154,12 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
         Returns:
             FrameData: The captured frame with metadata, or None if capture failed.
         """
-        ret, frame = self._owner()._capture.read()
+        ret, frame = self._owner()._capture.read() # pylint: disable=W0212
         if not ret:
             if not supress_warnings:
                 logger.warning("Frame capture failed in single-threaded mode.")
             return None
-        
+
         if self._should_skip_frame():
             number_of_frames_to_skip = 1
             # Create a separate thread to skip frames
@@ -167,7 +171,7 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
 
     def _skip_frames(self, n):
         for _ in range(n):
-            self._owner()._capture.read()  # Ignore the output
+            self._owner()._capture.read()  # pylint: disable=W0212
 
     def stop(self):
         """
@@ -190,8 +194,9 @@ class SingleThreadedStrategy(VideoCaptureStrategy):
             case FrameFilteringMethod.NONE:
                 new_method = FrameFilteringMethod.NONE
             case FrameFilteringMethod.SKIP_FRAME:
-                if self._owner()._is_camera:
-                    logger.warning("Single-threaded video capture ignores the filtering method %s when the input is from camera.", method.name)
+                if self._owner().is_camera:
+                    logger.warning("Single-threaded video capture ignores the filtering method %s when"
+                      " the input is from camera.", method.name)
                     new_method = FrameFilteringMethod.NONE
             case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
                 logger.warning("Single-threaded video capture ignores the filtering method %s.", method.name)
@@ -207,18 +212,19 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
     Strategy for multi-threaded video capture with queuing.
     """
 
-    def __init__(self, owner):
+    def __init__(self, _owner):
         """
         Initialize the multi-threaded strategy.
 
         Args:
-            owner (VideoStreamManager): The owner.
+            _owner (VideoStreamManager): The _owner.
         """
-        super(MultiThreadedStrategy, self).__init__(owner)
+        super().__init__(_owner)
         self._initial_max_queue_size = 30
         self._current_max_queue_size = self._initial_max_queue_size
         self._started = False
         self._thread = None
+        self._queue = None
 
     def start(self):
         """
@@ -285,14 +291,20 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
         new_method = method
         match method:
             case FrameFilteringMethod.NONE:
-                logger.warning("Multi-threaded-threaded video capture with filtering method 'NONE' can cause dropped frames.")
+                logger.warning(
+                "Multi-threaded-threaded video capture with filtering method 'NONE' can cause dropped frames.")
             case FrameFilteringMethod.SKIP_FRAME:
                 pass
             case FrameFilteringMethod.ADAPT_QUEUE_SIZE:
-                if self._owner()._is_camera:
-                    logger.warning("Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' with camera can cause high latency.")
+                if self._owner().is_camera:
+                    logger.warning(
+                        "Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' "
+                        " with camera can cause high latency.")
                 else:
-                    logger.warning("Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' with video might consume high memory use, consider switching to single-threaded video processing.")
+                    logger.warning(
+                        "Multi-threaded-threaded video capture with filtering method 'ADAPT_QUEUE_SIZE' "
+                        "with video might consume high memory use, consider switching to"
+                        " single-threaded video processing.")
             case _:
                 new_method = FrameFilteringMethod.NONE
         logger.debug("Multi-threaded video capture filtering method changed to %s.", new_method.name)
@@ -304,7 +316,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
         """
         self._index_skipped_frames = 0
         while self._started:
-            ret, frame = self._owner()._capture.read()
+            ret, frame = self._owner()._capture.read() # pylint: disable=W0212
             if not ret:
                 logger.warning("Frame capture failed in multi-threaded mode.")
                 break
@@ -313,7 +325,7 @@ class MultiThreadedStrategy(VideoCaptureStrategy):
                 continue
             if self._should_adapt_queue_size():
                 self._adapt_queue_size()
-            
+
             if not self._queue.full():
                 self._queue.put(FrameData(frame, time.time()))
             else:
@@ -358,19 +370,20 @@ class VideoStreamManager:
         """
         self._settings = weakref.ref(settings)
         self._capture = cv2.VideoCapture(capture_source)
-        self._is_camera = (capture_source == 0)
+        self.is_camera = capture_source == 0
         if settings.video.capture.width and settings.video.capture.height:
             self._capture.set(cv2.CAP_PROP_FRAME_WIDTH, settings.video.capture.width)
             self._capture.set(cv2.CAP_PROP_FRAME_HEIGHT, settings.video.capture.height)
 
         self.width = int(self._capture.get(cv2.CAP_PROP_FRAME_WIDTH))
         self.height = int(self._capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        self.fps = int(self._capture.get(cv2.CAP_PROP_FPS))        
+        self.fps = int(self._capture.get(cv2.CAP_PROP_FPS))
         logger.debug("Video captured with dimensions: %dx%d and %d fps", self.width, self.height, self.fps)
 
         self._started = False
         self.capture_strategy = None
-        self.set_strategy(SingleThreadedStrategy(self) if settings.video.capture.threading == "SINGLE" else MultiThreadedStrategy(self))
+        self.set_strategy(
+          SingleThreadedStrategy(self) if settings.video.capture.threading == "SINGLE" else MultiThreadedStrategy(self))
 
     def set_strategy(self, strategy):
         """
@@ -448,7 +461,7 @@ class VideoStreamManager:
         Release the video capture resources.
         """
         self.stop()
-        self.strategy = None
+        self.capture_strategy = None
         if self._capture.isOpened():
             self._capture.release()
 

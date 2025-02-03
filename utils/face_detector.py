@@ -6,9 +6,9 @@ Usage:
     Instantiate the `FaceDetector` class with a strategy and use it to detect faces in image frames,
     returning their bounding rectangles.
 """
+from abc import ABC, abstractmethod
 import cv2
 import numpy as np
-from abc import ABC, abstractmethod
 
 class FaceDetectionStrategy(ABC):
     """
@@ -27,7 +27,6 @@ class FaceDetectionStrategy(ABC):
         Returns:
             list: A list of rectangles where faces were detected, each represented as (x, y, w, h).
         """
-        pass
 
 
 class HaarCascadeFaceDetection(FaceDetectionStrategy):
@@ -46,7 +45,7 @@ class HaarCascadeFaceDetection(FaceDetectionStrategy):
         if self._face_cascade.empty():
             raise RuntimeError(f"Failed to load Haar cascade model from path: {model_path}")
 
-    def detect_faces(self, frame: np.ndarray, scale_factor=1.1, min_neighbors=5, min_size=(30, 30)):
+    def detect_faces(self, frame: np.ndarray, **kwargs):
         """
         Detect faces using Haar cascades.
 
@@ -59,6 +58,10 @@ class HaarCascadeFaceDetection(FaceDetectionStrategy):
         Returns:
             list: A list of rectangles where faces were detected.
         """
+        scale_factor = kwargs.get('scale_factor', 1.1)
+        min_neighbors = kwargs.get('min_neighbors', 5)
+        min_size = kwargs.get('min_size', (30, 30))
+
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
         faces = self._face_cascade.detectMultiScale(
             gray,
@@ -85,7 +88,7 @@ class OCVDnnFaceDetection(FaceDetectionStrategy):
         """
         self._net = cv2.dnn.readNetFromCaffe(config_path, model_path)
 
-    def detect_faces(self, frame: np.ndarray, confidence_threshold=0.6):
+    def detect_faces(self, frame: np.ndarray, **kwargs):
         """
         Detect faces using a DNN-based face detector.
 
@@ -96,6 +99,8 @@ class OCVDnnFaceDetection(FaceDetectionStrategy):
         Returns:
             list: A list of rectangles where faces were detected.
         """
+        confidence_threshold = kwargs.get('confidence_threshold', 0.6)
+
         (h, w) = frame.shape[:2]
         blob = cv2.dnn.blobFromImage(frame, 1.0, (300, 300), (104.0, 177.0, 123.0))
         self._net.setInput(blob)
@@ -106,8 +111,8 @@ class OCVDnnFaceDetection(FaceDetectionStrategy):
             confidence = detections[0, 0, i, 2]
             if confidence > confidence_threshold:
                 box = detections[0, 0, i, 3:7] * np.array([w, h, w, h])
-                (startX, startY, endX, endY) = box.astype("int")
-                faces.append((startX, startY, endX - startX, endY - startY))
+                (start_x, start_y, end_x, end_y) = box.astype("int")
+                faces.append((start_x, start_y, end_x - start_x, end_y - start_y))
 
         return faces
 
@@ -146,23 +151,3 @@ class FaceDetector:
             list: A list of rectangles where faces were detected.
         """
         return self._strategy.detect_faces(frame, **kwargs)
-
-
-# Example Usage
-if __name__ == "__main__":
-    # Initialize Haar cascade face detection
-    haar_strategy = HaarCascadeFaceDetection()
-    face_detector = FaceDetector(haar_strategy)
-
-    # Load an image
-    image = cv2.imread("example.jpg")
-
-    # Detect faces
-    faces = face_detector.detect_faces(image)
-    print("Faces detected (Haar):", faces)
-
-    # Switch to DNN-based face detection
-    dnn_strategy = OCVDnnFaceDetection()
-    face_detector.set_strategy(dnn_strategy)
-    faces = face_detector.detect_faces(image, confidence_threshold=0.6)
-    print("Faces detected (DNN):", faces)

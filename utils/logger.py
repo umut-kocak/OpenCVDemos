@@ -63,15 +63,19 @@ class ThreadedLogger:
         self.logger.info("Threaded logger '%s' initialized.", name)
 
     def debug(self, msg, *args, **kwargs):
+        """ Logs debug message."""
         self.log(logging.DEBUG, msg, *args, **kwargs)
 
     def info(self, msg, *args, **kwargs):
+        """ Logs info message."""
         self.log(logging.INFO, msg, *args, **kwargs)
 
     def warning(self, msg, *args, **kwargs):
+        """ Logs warning message."""
         self.log(logging.WARNING, msg, *args, **kwargs)
 
     def error(self, msg, *args, **kwargs):
+        """ Logs error message."""
         self.log(logging.ERROR, msg, *args, **kwargs)
 
     def log(self, level, msg, *args, **kwargs):
@@ -105,20 +109,16 @@ class NoneLogger:
     """
 
     def debug(self, msg, *args, **kwargs):
-        """
-        """
+        """ Logs debug message."""
 
     def info(self, msg, *args, **kwargs):
-        """
-        """
+        """ Logs info message."""
 
     def warning(self, msg, *args, **kwargs):
-        """
-        """
+        """ Logs warning message."""
 
     def error(self, msg, *args, **kwargs):
-        """
-        """
+        """ Logs error message."""
 
 # Define a default global logger with basic configuration
 logger = None # pylint: disable=C0103
@@ -189,17 +189,12 @@ def initialize_global_logger_threaded(name="ApplicationLogger", log_to_console=T
     logger.initialize_logger(name, log_to_console, log_to_file, console_level, file_level)
     logger.debug("Logger '%s' initialized.", name)
 
-def initialize_global_logger_none(name="ApplicationLogger", log_to_console=True,
-                      log_to_file=None, console_level=logging.INFO, file_level=logging.DEBUG):
+def initialize_global_logger_none(name="ApplicationLogger"):
     """
     Initialize the global logger instance with specific settings.
 
     Args:
         name (str): The name of the logger.
-        log_to_console (bool): Whether to log to the console.
-        log_to_file (Optional[str]): Path to the log file. If None, file logging is disabled.
-        console_level (int): Logging level for the console handler.
-        file_level (int): Logging level for the file handler.
     """
     global logger # pylint: disable=global-statement
 

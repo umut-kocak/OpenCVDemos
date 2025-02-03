@@ -1,18 +1,14 @@
-# Face Detection Demo
+# Image Stitching Demo
 
-This project provides a real-time **Face Detection Demo** built upon the `BaseVideoDemo` framework.
-The application uses the `FaceDetector` utility to identify faces in video streams and overlay rectangles around
-the detected faces. This demo includes a user-friendly interface for visualizing processed video frames and logs
-runtime events for debugging and analysis.
+This project demonstrates real-time image stitching using video frame extraction. It captures frames from a video stream,
+processes them, and stitches them together using OpenCV's stitching algorithms.
 
-## How It Works
+## Features
+- Extract frames from a video feed.
+- Supports both OpenCV’s built-in and detailed stitching methods.
+- Performs stitching in a separate thread for optimized performance.
+- Saves and displays the stitched output.
 
-1. **Face Detection**: 
-   - Each video frame is passed to the `FaceDetector` utility, which detects faces.
-   - Bounding boxes are drawn around detected faces.
-   
-2. **Real-Time Visualization**: 
-   - The processed frames are displayed in a window titled "Face Detection Demo".
-
-3. **Logging**: 
-   - A logger is initialized at runtime to record events to both the console and a log file.
+## Usage
+The demo initializes an image extractor to capture frames and a stitcher to combine them into a panoramic image.
+The stitched result is saved and displayed in a separate window and stored in the output folder.

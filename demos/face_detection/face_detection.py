@@ -20,7 +20,7 @@ class FaceDetectionDemo(BaseVideoDemo):
         strategies = {
             0: ( OCVDnnFaceDetection,
                 {
-                "model_path": self.get_asset_path("models/res10_300x300_ssd_iter_140000.caffemodel"), 
+                "model_path": self.get_asset_path("models/res10_300x300_ssd_iter_140000.caffemodel"),
                 "config_path": self.get_asset_path("models/deploy.proto.txt") }
             ),
             1: ( HaarCascadeFaceDetection,
@@ -48,7 +48,7 @@ class FaceDetectionDemo(BaseVideoDemo):
 
         - Press 'm' to cycle through the available stylization modes.
         """
-        super(FaceDetectionDemo, self).register_keys()
+        super().register_keys()
 
         def adjust_detection_strategy(delta):
             self._current_strategy = (self._current_strategy + delta) % self._number_of_strategies
@@ -59,10 +59,11 @@ class FaceDetectionDemo(BaseVideoDemo):
             # General keys
             (ord('m'), "Change the detection strategy ", lambda delta: adjust_detection_strategy(delta), 1)
         ]
-    
+
         # Register all key bindings
         for key, description, callback, callback_arg, *args in key_bindings:
-            self._key_manager.register_key(key, description, callback, callback_arg, *args, name_space=self.get_window_name())
+            self._key_manager.register_key(key, description, callback, callback_arg, *args,
+                name_space=self.get_window_name())
 
     def get_window_name(self):
         """Return the name of the demo window."""

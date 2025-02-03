@@ -3,13 +3,14 @@ This module provides the `KeyManager` class for handling keyboard events in an a
 It allows registering keys with associated callbacks and descriptions, managing quit keys,
 and providing a help text summary for the registered keys and their functions.
 """
-have_keyboard = True
+from utils.logger import logger
+
+HAVE_KEYBOARD = True
 try:
     import keyboard
 except:
-    have_keyboard = False
+    HAVE_KEYBOARD = False
 
-from utils.logger import logger
 
 class KeyManager:
     """
@@ -41,7 +42,7 @@ class KeyManager:
             ValueError: If the key or callback is invalid.
         """
         if not callable(callback):
-            raise ValueError("The callback must be a callable function or method.")
+            raise ValueError("The callback with description %s must be a callable function or method.", description)
 
         if key in self._key_descriptions:
             logger.warning("%s is already registered.", chr(key))
@@ -89,7 +90,7 @@ class KeyManager:
             (key, desc) for key, (desc, ns) in self._key_descriptions.items()
             if name_space is None or name_space == ns
         ]
-        
+
         # Return the formatted list of strings
         return [f"{chr(key)}: {desc}" for key, desc in filtered_keys]
 
@@ -116,13 +117,12 @@ class KeyManager:
         Some GUI backends do not distinguish for capital letters.
         This function provides a standard solution.
         """
-        global have_keyboard
-        if not have_keyboard:
+        if not HAVE_KEYBOARD:
             return key
         # Detect if Shift or Caps Lock is active
         shift_pressed = keyboard.is_pressed("shift")
         caps_lock_active = keyboard.is_pressed("caps lock")
-        
+
         # Normalize key: Uppercase if Shift or Caps Lock is active
         if 97 <= key <= 122:  # 'a' to 'z'
             if shift_pressed ^ caps_lock_active:  # XOR: one but not both is active
