@@ -10,8 +10,8 @@ dependencies:
   - pytorch-cuda=12.4
   - torchaudio=2.5.0
   - torchvision=0.20.0
-  - numpy=2.2.0  # If available; adjust if version isn't in Conda
-  - opencv=4.10  # Includes contrib modules in conda-forge #opencv-contrib-python==4.10.0.84
+  - numpy
+  - opencv
   - keyboard
   - pip
   - pip:
