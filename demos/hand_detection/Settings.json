@@ -1,0 +1,26 @@
+{
+    "Settings": {
+        "demo": {
+            "gestures_text_position" : [0.8, 0.3]
+        },
+        "video": {
+            "capture": {
+                "threading": "Multi",
+                "frame_filtering": {
+                    "method": "SKIP_FRAME",
+                    "skip_frame": {
+                        "action": "PICKUP",
+                        "period": 3
+                    }
+                }
+            }
+        },
+        "frame": {
+            "missing_to_tolerate": -200
+        },
+        "stats": {
+            "show_help": true,
+            "show_stats": true
+        }
+    }
+}

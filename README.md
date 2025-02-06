@@ -23,6 +23,9 @@ during the demo.
 ### Face Detection
 A real-time identification of faces in video streams and overlaying rectangles around the detected faces.
 
+### Hand Detection
+A real-time identification of hands and finger joints in video streams and its visualisation as well as gesture estimation.
+
 ### Image Stitching
 Demonstrates real-time image stitching using video frame extraction. It captures frames from a video stream,
 processes them, and stitches them together for panaroma or environment map creation.

@@ -15,4 +15,4 @@ dependencies:
   - keyboard
   - pip
   - pip:
-    - mediapipe
+    - mediapipe==0.10.13
