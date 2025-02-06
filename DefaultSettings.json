@@ -4,6 +4,7 @@
 		"video": {
 			"capture": {
 				"source": 0,
+				"flip_camera_source": true,
 				"width": 640,
 				"height": 480,
 				"threading": "MULTI",

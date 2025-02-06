@@ -45,8 +45,6 @@ class FaceDetectionDemo(BaseVideoDemo):
     def register_keys(self):
         """
         Register keyboard keys and their corresponding handlers for the demo.
-
-        - Press 'm' to cycle through the available stylization modes.
         """
         super().register_keys()
 

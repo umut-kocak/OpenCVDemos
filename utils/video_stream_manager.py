@@ -443,7 +443,10 @@ class VideoStreamManager:
             logger.warning(
                 "VideoStreamManager is not started. Cannot get frame.")
             return None
-        return self.capture_strategy.get_frame()
+        frame = self.capture_strategy.get_frame()
+        if frame is not None and self._settings().video.capture.flip_camera_source:
+            frame.image = cv2.flip(frame.image, 1)
+        return frame
 
     def stop(self):
         """
